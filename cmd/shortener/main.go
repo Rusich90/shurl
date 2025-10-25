@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/", handler.CreateShortUrl)
-	http.HandleFunc("/{id}", handler.GetOriginalUrl)
+	http.HandleFunc("/", handler.CreateShortURL)
+	http.HandleFunc("/{id}", handler.GetOriginalURL)
 
 	fmt.Println("Starting server on :8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

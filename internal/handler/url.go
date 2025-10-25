@@ -15,7 +15,7 @@ var (
 	urlService = service.NewURLService(store)
 )
 
-func CreateShortUrl(w http.ResponseWriter, r *http.Request) {
+func CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -47,7 +47,7 @@ func CreateShortUrl(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(shortURL))
 }
 
-func GetOriginalUrl(w http.ResponseWriter, r *http.Request) {
+func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
