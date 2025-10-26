@@ -5,9 +5,17 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/Rusich90/shurl.git/internal/config"
 )
 
 func TestCreateShortURL(t *testing.T) {
+	// Set up default configuration for tests
+	config.AppConfig = &config.Config{
+		ServerAddress: "localhost:8080",
+		BaseURL:       "http://localhost:8080",
+	}
+	
 	tests := []struct {
 		name           string
 		method         string
@@ -76,6 +84,12 @@ func TestCreateShortURL(t *testing.T) {
 }
 
 func TestGetOriginalURL(t *testing.T) {
+	// Set up default configuration for tests
+	config.AppConfig = &config.Config{
+		ServerAddress: "localhost:8080",
+		BaseURL:       "http://localhost:8080",
+	}
+	
 	body := "https://example.com"
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
 	w := httptest.NewRecorder()
