@@ -3,69 +3,81 @@ package handler
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
 	"github.com/Rusich90/shurl.git/internal/config"
-	"github.com/Rusich90/shurl.git/internal/repository"
 	"github.com/Rusich90/shurl.git/internal/service"
+	"github.com/gin-gonic/gin"
 )
 
-var (
-	store      = repository.NewURLStore()
-	urlService = service.NewURLService(store)
-)
+type Handler struct {
+	urlService *service.URLService
+	cfg        *config.Config
+}
 
-func CreateShortURL(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func NewHandler(urlService *service.URLService, cfg *config.Config) *Handler {
+	return &Handler{
+		urlService: urlService,
+		cfg:        cfg,
+	}
+}
+
+func (h *Handler) CreateShortURL(c *gin.Context) {
+	if c.Request.Method != http.MethodPost {
+		c.AbortWithStatus(http.StatusMethodNotAllowed)
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
 		return
 	}
-	defer r.Body.Close()
+	defer c.Request.Body.Close()
 
 	url := strings.TrimSpace(string(body))
 	if url == "" {
-		http.Error(w, "URL is required", http.StatusBadRequest)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "URL is required"})
 		return
 	}
 
 	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
-		http.Error(w, "Invalid URL format", http.StatusBadRequest)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid URL format"})
 		return
 	}
 
-	id := urlService.CreateShortURL(url)
-	shortURL := fmt.Sprintf("%s/%s", config.GetConfig().BaseURL, id)
+	id, err := h.urlService.CreateShortURL(url)
+	if err != nil {
+		log.Printf("Failed to create short URL: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(shortURL))
+	shortURL := fmt.Sprintf("%s/%s", h.cfg.BaseURL, id)
+
+	c.Status(http.StatusCreated)
+	c.String(http.StatusCreated, shortURL)
 }
 
-func GetOriginalURL(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func (h *Handler) GetOriginalURL(c *gin.Context) {
+	if c.Request.Method != http.MethodGet {
+		c.AbortWithStatus(http.StatusMethodNotAllowed)
 		return
 	}
 
-	id := r.URL.Path[1:]
+	id := c.Param("id")
 	if id == "" {
-		http.Error(w, "ID is required", http.StatusBadRequest)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "ID is required"})
 		return
 	}
 
-	url, exists := urlService.GetOriginalURL(id)
-	if !exists {
-		http.Error(w, "URL not found", http.StatusNotFound)
+	url, ok := h.urlService.GetOriginalURL(id)
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "URL not found"})
 		return
 	}
 
-	w.Header().Set("Location", url)
-	w.WriteHeader(http.StatusTemporaryRedirect)
+	c.Redirect(http.StatusTemporaryRedirect, url)
 }

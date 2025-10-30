@@ -9,13 +9,6 @@ type Config struct {
 	BaseURL       string
 }
 
-var AppConfig *Config
-
-const (
-	Charset  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	IDLength = 5
-)
-
 func InitConfig() *Config {
 	config := &Config{}
 
@@ -25,14 +18,4 @@ func InitConfig() *Config {
 	flag.Parse()
 
 	return config
-}
-
-func GetConfig() *Config {
-	if AppConfig == nil {
-		AppConfig = &Config{
-			ServerAddress: "localhost:8080",
-			BaseURL:       "http://localhost:8080",
-		}
-	}
-	return AppConfig
 }

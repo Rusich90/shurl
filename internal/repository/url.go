@@ -15,6 +15,6 @@ func (s *URLStore) SaveWithID(id, url string) {
 }
 
 func (s *URLStore) Get(id string) (string, bool) {
-	url, exists := s.urls[id]
-	return url, exists
+	url, ok := s.urls[id]
+	return url, ok
 }

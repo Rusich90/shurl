@@ -1,30 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"log"
 
 	"github.com/Rusich90/shurl.git/internal/config"
-	"github.com/Rusich90/shurl.git/internal/handler"
-	"github.com/gin-gonic/gin"
+	"github.com/Rusich90/shurl.git/internal/server"
 )
 
-func ginHandlerAdapter(h http.HandlerFunc) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		h(c.Writer, c.Request)
-	}
-}
-
 func main() {
-	config.AppConfig = config.InitConfig()
+	cfg := config.InitConfig()
 
-	r := gin.Default()
+	r := server.SetupRouter(cfg)
 
-	r.POST("/", ginHandlerAdapter(handler.CreateShortURL))
-	r.GET("/:id", ginHandlerAdapter(handler.GetOriginalURL))
-
-	fmt.Printf("Starting server on %s\n", config.AppConfig.ServerAddress)
-	if err := r.Run(config.AppConfig.ServerAddress); err != nil {
-		fmt.Printf("Server failed to start: %v\n", err)
+	log.Printf("Starting server on %s\n", cfg.ServerAddress)
+	if err := r.Run(cfg.ServerAddress); err != nil {
+		log.Fatalf("Server failed to start: %v\n", err)
 	}
 }
