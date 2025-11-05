@@ -18,13 +18,13 @@ func TestCreateShortURL(t *testing.T) {
 		ServerAddress: "localhost:8080",
 		BaseURL:       "http://localhost:8080",
 	}
-	
+
 	store := repository.NewURLStore()
 	urlService := service.NewURLService(store, cfg)
 	handler := NewHandler(urlService, cfg)
-	
+
 	gin.SetMode(gin.TestMode)
-	
+
 	tests := []struct {
 		name           string
 		method         string
@@ -66,25 +66,29 @@ func TestCreateShortURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Request, _ = http.NewRequest(tt.method, "/", strings.NewReader(tt.body))
-			
+			var err error
+			c.Request, err = http.NewRequest(tt.method, "/", strings.NewReader(tt.body))
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+
 			handler.CreateShortURL(c)
-			
+
 			if w.Code != tt.expectedStatus {
 				t.Fatalf("Expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
-			
+
 			if tt.checkResponse && w.Code == http.StatusCreated {
 				expectedContentType := "text/plain; charset=utf-8"
 				if contentType := w.Header().Get("Content-Type"); contentType != expectedContentType {
 					t.Errorf("Expected Content-Type %s, got %s", expectedContentType, contentType)
 				}
-				
+
 				responseBody := w.Body.String()
 				if responseBody == "" {
 					t.Error("Expected non-empty response body")
 				}
-				
+
 				if !strings.Contains(responseBody, "http://localhost:8080/") {
 					t.Errorf("Expected response to contain short URL, got %s", responseBody)
 				}
@@ -99,22 +103,26 @@ func TestGetOriginalURL(t *testing.T) {
 		ServerAddress: "localhost:8080",
 		BaseURL:       "http://localhost:8080",
 	}
-	
+
 	store := repository.NewURLStore()
 	urlService := service.NewURLService(store, cfg)
 	handler := NewHandler(urlService, cfg)
-	
+
 	// Create a short URL first
 	w1 := httptest.NewRecorder()
 	c1, _ := gin.CreateTestContext(w1)
-	c1.Request, _ = http.NewRequest(http.MethodPost, "/", strings.NewReader("https://example.com"))
+	var err error
+	c1.Request, err = http.NewRequest(http.MethodPost, "/", strings.NewReader("https://example.com"))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
 	handler.CreateShortURL(c1)
 
 	shortURL := w1.Body.String()
 	id := shortURL[strings.LastIndex(shortURL, "/")+1:]
 
 	gin.SetMode(gin.TestMode)
-	
+
 	tests := []struct {
 		name             string
 		method           string
@@ -161,15 +169,19 @@ func TestGetOriginalURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Request, _ = http.NewRequest(tt.method, tt.path, nil)
+			var err error
+			c.Request, err = http.NewRequest(tt.method, tt.path, nil)
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
 			c.AddParam("id", tt.param)
-			
+
 			handler.GetOriginalURL(c)
-			
+
 			if w.Code != tt.expectedStatus {
 				t.Fatalf("Expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
-			
+
 			if tt.expectedLocation != "" {
 				location := w.Header().Get("Location")
 				if location != tt.expectedLocation {
