@@ -15,7 +15,6 @@ func InitConfig() *Config {
 
 	flag.StringVar(&config.ServerAddress, "a", "localhost:8080", "HTTP server address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened URLs")
-
 	flag.Parse()
 
 	if envServAddr := os.Getenv("SERVER_ADDRESS"); envServAddr != "" {
