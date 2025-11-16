@@ -3,7 +3,7 @@ package server
 import (
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/handler"
-	"github.com/Rusich90/shurl.git/internal/logger"
+	"github.com/Rusich90/shurl.git/internal/middleware"
 	"github.com/Rusich90/shurl.git/internal/repository"
 	"github.com/Rusich90/shurl.git/internal/service"
 	"github.com/gin-gonic/gin"
@@ -20,7 +20,8 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 	urlHandler := handler.NewHandler(urlService, cfg, log)
 
 	r := gin.New()
-	r.Use(logger.LoggerMiddleware(log))
+	r.Use(middleware.LoggerMiddleware(log))
+	r.Use(middleware.GzipMiddleware())
 
 	r.POST("/", urlHandler.CreateShortURL)
 	r.GET("/:id", urlHandler.GetOriginalURL)
