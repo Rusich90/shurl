@@ -12,17 +12,23 @@ import (
 
 func SetupRouter(cfg *config.Config) *gin.Engine {
 	store := repository.NewURLStore()
-	urlService := service.NewURLService(store, cfg)
-	urlHandler := handler.NewHandler(urlService, cfg)
 
 	log, _ := zap.NewProduction()
 	defer log.Sync()
+
+	urlService := service.NewURLService(store, cfg)
+	urlHandler := handler.NewHandler(urlService, cfg, log)
 
 	r := gin.New()
 	r.Use(logger.LoggerMiddleware(log))
 
 	r.POST("/", urlHandler.CreateShortURL)
 	r.GET("/:id", urlHandler.GetOriginalURL)
+
+	api := r.Group("/api")
+	{
+		api.POST("/shorten", urlHandler.JSONCreateShortURL)
+	}
 
 	return r
 }

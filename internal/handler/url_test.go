@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +12,8 @@ import (
 	"github.com/Rusich90/shurl.git/internal/repository"
 	"github.com/Rusich90/shurl.git/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestCreateShortURL(t *testing.T) {
@@ -19,9 +23,11 @@ func TestCreateShortURL(t *testing.T) {
 		BaseURL:       "http://localhost:8080",
 	}
 
+	logger := zap.NewNop()
+
 	store := repository.NewURLStore()
 	urlService := service.NewURLService(store, cfg)
-	handler := NewHandler(urlService, cfg)
+	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
 
@@ -97,18 +103,174 @@ func TestCreateShortURL(t *testing.T) {
 	}
 }
 
-func TestGetOriginalURL(t *testing.T) {
-	// Set up dependencies for tests
+func TestJsonCreateShortURL(t *testing.T) {
 	cfg := &config.Config{
 		ServerAddress: "localhost:8080",
 		BaseURL:       "http://localhost:8080",
 	}
 
+	logger := zap.NewNop()
+
 	store := repository.NewURLStore()
 	urlService := service.NewURLService(store, cfg)
-	handler := NewHandler(urlService, cfg)
+	handler := NewHandler(urlService, cfg, logger)
 
-	// Create a short URL first
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name           string
+		method         string
+		body           string
+		contentType    string
+		expectedStatus int
+		checkResponse  bool
+		expectedError  string
+	}{
+		{
+			name:           "successful creation with valid JSON",
+			method:         http.MethodPost,
+			body:           `{"url":"https://example.com"}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusCreated,
+			checkResponse:  true,
+		},
+		{
+			name:           "wrong method",
+			method:         http.MethodGet,
+			body:           `{"url":"https://example.com"}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusMethodNotAllowed,
+			checkResponse:  false,
+		},
+		{
+			name:           "invalid JSON format",
+			method:         http.MethodPost,
+			body:           `{"url":}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusBadRequest,
+			checkResponse:  false,
+			expectedError:  "Invalid JSON format",
+		},
+		{
+			name:           "missing URL field",
+			method:         http.MethodPost,
+			body:           `{}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusBadRequest,
+			checkResponse:  false,
+			expectedError:  "url is required",
+		},
+		{
+			name:           "empty URL value",
+			method:         http.MethodPost,
+			body:           `{"url":""}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusBadRequest,
+			checkResponse:  false,
+			expectedError:  "url is required",
+		},
+		{
+			name:           "invalid URL format",
+			method:         http.MethodPost,
+			body:           `{"url":"invalid-url"}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusBadRequest,
+			checkResponse:  false,
+			expectedError:  "url must use http or https scheme",
+		},
+		{
+			name:           "FTP scheme not allowed",
+			method:         http.MethodPost,
+			body:           `{"url":"ftp://example.com"}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusBadRequest,
+			checkResponse:  false,
+			expectedError:  "url must use http or https scheme",
+		},
+		{
+			name:           "HTTP scheme allowed",
+			method:         http.MethodPost,
+			body:           `{"url":"http://example.com"}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusCreated,
+			checkResponse:  true,
+		},
+		{
+			name:           "HTTPS scheme allowed",
+			method:         http.MethodPost,
+			body:           `{"url":"https://example.com"}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusCreated,
+			checkResponse:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			var err error
+			c.Request, err = http.NewRequest(tt.method, "/api/shorten", bytes.NewBufferString(tt.body))
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+			if tt.contentType != "" {
+				c.Request.Header.Set("Content-Type", tt.contentType)
+			}
+
+			handler.JSONCreateShortURL(c)
+
+			assert.Equal(t, tt.expectedStatus, w.Code, "Status code mismatch")
+
+			if tt.checkResponse && w.Code == http.StatusCreated {
+				expectedContentType := "application/json"
+				contentType := w.Header().Get("Content-Type")
+				assert.Contains(t, contentType, expectedContentType, "Content-Type should be application/json")
+
+				var response map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err, "Response should be valid JSON")
+
+				result, exists := response["result"]
+				assert.True(t, exists, "Response should contain 'result' field")
+				assert.NotEmpty(t, result, "Result should not be empty")
+
+				resultStr, ok := result.(string)
+				assert.True(t, ok, "Result should be a string")
+				assert.Contains(t, resultStr, "http://localhost:8080/", "Result should contain base URL")
+			}
+
+			if tt.expectedError != "" && w.Code >= 400 {
+				// Проверяем структуру ошибки
+				var response map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err, "Error response should be valid JSON")
+
+				// Проверяем наличие поля error
+				errorMsg, exists := response["error"]
+				assert.True(t, exists, "Error response should contain 'error' field")
+
+				// Проверяем текст ошибки
+				errorStr, ok := errorMsg.(string)
+				assert.True(t, ok, "Error message should be a string")
+				assert.Equal(t, tt.expectedError, errorStr, "Error message mismatch")
+			}
+		})
+	}
+}
+
+func TestGetOriginalURL(t *testing.T) {
+	cfg := &config.Config{
+		ServerAddress: "localhost:8080",
+		BaseURL:       "http://localhost:8080",
+	}
+
+	logger := zap.NewNop()
+
+	store := repository.NewURLStore()
+	urlService := service.NewURLService(store, cfg)
+	handler := NewHandler(urlService, cfg, logger)
+
 	w1 := httptest.NewRecorder()
 	c1, _ := gin.CreateTestContext(w1)
 	var err error
