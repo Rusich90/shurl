@@ -5,27 +5,42 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/repository"
 	"github.com/Rusich90/shurl.git/internal/service"
+	"github.com/Rusich90/shurl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
 func TestCreateShortURL(t *testing.T) {
-	// Set up dependencies for tests
+	tmpFile, err := os.CreateTemp("", "test_urls_*.jsonl")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
 	cfg := &config.Config{
-		ServerAddress: "localhost:8080",
-		BaseURL:       "http://localhost:8080",
+		ServerAddress:   "localhost:8080",
+		BaseURL:         "http://localhost:8080",
+		FileStoragePath: tmpFile.Name(),
 	}
 
 	logger := zap.NewNop()
 
-	store := repository.NewURLStore()
+	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+	if err != nil {
+		t.Fatalf("Failed to create file storage: %v", err)
+	}
+
+	store := repository.NewURLStore(*fileStorage)
 	urlService := service.NewURLService(store, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 
@@ -104,14 +119,28 @@ func TestCreateShortURL(t *testing.T) {
 }
 
 func TestJsonCreateShortURL(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "test_urls_*.jsonl")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
 	cfg := &config.Config{
-		ServerAddress: "localhost:8080",
-		BaseURL:       "http://localhost:8080",
+		ServerAddress:   "localhost:8080",
+		BaseURL:         "http://localhost:8080",
+		FileStoragePath: tmpFile.Name(),
 	}
 
 	logger := zap.NewNop()
 
-	store := repository.NewURLStore()
+	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+	if err != nil {
+		t.Fatalf("Failed to create file storage: %v", err)
+	}
+
+	store := repository.NewURLStore(*fileStorage)
 	urlService := service.NewURLService(store, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 
@@ -260,20 +289,34 @@ func TestJsonCreateShortURL(t *testing.T) {
 }
 
 func TestGetOriginalURL(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "test_urls_*.jsonl")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
 	cfg := &config.Config{
-		ServerAddress: "localhost:8080",
-		BaseURL:       "http://localhost:8080",
+		ServerAddress:   "localhost:8080",
+		BaseURL:         "http://localhost:8080",
+		FileStoragePath: tmpFile.Name(),
 	}
 
 	logger := zap.NewNop()
 
-	store := repository.NewURLStore()
+	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+	if err != nil {
+		t.Fatalf("Failed to create file storage: %v", err)
+	}
+
+	store := repository.NewURLStore(*fileStorage)
 	urlService := service.NewURLService(store, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 
 	w1 := httptest.NewRecorder()
 	c1, _ := gin.CreateTestContext(w1)
-	var err error
+
 	c1.Request, err = http.NewRequest(http.MethodPost, "/", strings.NewReader("https://example.com"))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)

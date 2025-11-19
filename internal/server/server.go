@@ -1,17 +1,29 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/handler"
 	"github.com/Rusich90/shurl.git/internal/middleware"
 	"github.com/Rusich90/shurl.git/internal/repository"
 	"github.com/Rusich90/shurl.git/internal/service"
+	"github.com/Rusich90/shurl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
-func SetupRouter(cfg *config.Config) *gin.Engine {
-	store := repository.NewURLStore()
+func SetupServer(cfg *config.Config) (*gin.Engine, error) {
+	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize file storage: %w", err)
+	}
+
+	store := repository.NewURLStore(*fileStorage)
+	err = store.LoadFromStorage()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load store: %w", err)
+	}
 
 	log, _ := zap.NewProduction()
 	defer log.Sync()
@@ -31,5 +43,5 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 		api.POST("/shorten", urlHandler.JSONCreateShortURL)
 	}
 
-	return r
+	return r, nil
 }

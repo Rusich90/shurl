@@ -7,3 +7,8 @@ type CreateURLRequest struct {
 type CreateURLResponse struct {
 	Result string `json:"result"`
 }
+
+type URLRow struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
