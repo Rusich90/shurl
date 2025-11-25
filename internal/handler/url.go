@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/Rusich90/shurl.git/internal/config"
@@ -43,25 +43,29 @@ func (h *Handler) CreateShortURL(c *gin.Context) {
 	}
 	defer c.Request.Body.Close()
 
-	url := strings.TrimSpace(string(body))
-	if url == "" {
+	originallURL := strings.TrimSpace(string(body))
+	if originallURL == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "URL is required"})
 		return
 	}
 
-	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+	if !strings.HasPrefix(originallURL, "http://") && !strings.HasPrefix(originallURL, "https://") {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid URL format"})
 		return
 	}
 
-	id, err := h.urlService.CreateShortURL(url)
+	id, err := h.urlService.CreateShortURL(originallURL)
 	if err != nil {
 		log.Printf("Failed to create short URL: %v", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
-	shortURL := fmt.Sprintf("%s/%s", h.cfg.BaseURL, id)
+	shortURL, err := url.JoinPath(h.cfg.BaseURL, id)
+	if err != nil {
+		h.logger.Error("Failed to join URL paths: %v", zap.Error(err))
+		return
+	}
 
 	c.Status(http.StatusCreated)
 	c.String(http.StatusCreated, shortURL)
@@ -119,7 +123,11 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 		return
 	}
 
-	shortURL := fmt.Sprintf("%s/%s", h.cfg.BaseURL, id)
+	shortURL, err := url.JoinPath(h.cfg.BaseURL, id)
+	if err != nil {
+		h.logger.Error("Failed to join URL paths: %v", zap.Error(err))
+		return
+	}
 
 	response := model.CreateURLResponse{
 		Result: shortURL,

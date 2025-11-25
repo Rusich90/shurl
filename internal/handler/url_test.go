@@ -40,7 +40,11 @@ func TestCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store := repository.NewURLStore(*fileStorage)
+	store, err := repository.NewURLStore(*fileStorage)
+	if err != nil {
+		t.Fatalf("Failed to create urlStore: %v", err)
+	}
+
 	urlService := service.NewURLService(store, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 
@@ -140,7 +144,10 @@ func TestJsonCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store := repository.NewURLStore(*fileStorage)
+	store, err := repository.NewURLStore(*fileStorage)
+	if err != nil {
+		t.Fatalf("Failed to create urlStore: %v", err)
+	}
 	urlService := service.NewURLService(store, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 
@@ -310,7 +317,10 @@ func TestGetOriginalURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store := repository.NewURLStore(*fileStorage)
+	store, err := repository.NewURLStore(*fileStorage)
+	if err != nil {
+		t.Fatalf("Failed to create urlStore: %v", err)
+	}
 	urlService := service.NewURLService(store, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 

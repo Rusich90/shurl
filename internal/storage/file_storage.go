@@ -3,6 +3,7 @@ package storage
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/Rusich90/shurl.git/internal/model"
@@ -15,7 +16,7 @@ type FileStorage struct {
 func NewFileStorage(fileName string) (*FileStorage, error) {
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed os.OpenFile: %w", err)
 	}
 	file.Close()
 
@@ -27,17 +28,17 @@ func NewFileStorage(fileName string) (*FileStorage, error) {
 func (f *FileStorage) SaveRow(row model.URLRow) error {
 	file, err := os.OpenFile(f.fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed os.OpenFile: %w", err)
 	}
 	defer file.Close()
 
 	data, err := json.Marshal(row)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed json.Marshal: %w", err)
 	}
 
 	_, err = file.Write(append(data, '\n'))
-	return err
+	return fmt.Errorf("failed file.Write: %w", err)
 }
 
 func (f *FileStorage) GetURLs() ([]model.URLRow, error) {
@@ -46,7 +47,7 @@ func (f *FileStorage) GetURLs() ([]model.URLRow, error) {
 		if os.IsNotExist(err) {
 			return []model.URLRow{}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed os.Open: %w", err)
 	}
 	defer file.Close()
 
@@ -65,7 +66,7 @@ func (f *FileStorage) GetURLs() ([]model.URLRow, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scanner.Err: %w", err)
 	}
 
 	return urls, nil

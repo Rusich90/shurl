@@ -19,15 +19,15 @@ func InitConfig() *Config {
 	flag.StringVar(&config.FileStoragePath, "f", "file_storage.jsonl", "Path to file storage")
 	flag.Parse()
 
-	if envServAddr := os.Getenv("SERVER_ADDRESS"); envServAddr != "" {
+	if envServAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
 		config.ServerAddress = envServAddr
 	}
 
-	if envBaseURL := os.Getenv("BASE_URL"); envBaseURL != "" {
+	if envBaseURL, exists := os.LookupEnv("BASE_URL"); exists {
 		config.BaseURL = envBaseURL
 	}
 
-	if envFileStoragePath := os.Getenv("FILE_STORAGE_PATH"); envFileStoragePath != "" {
+	if envFileStoragePath, exists := os.LookupEnv("FILE_STORAGE_PATH"); exists {
 		config.FileStoragePath = envFileStoragePath
 	}
 

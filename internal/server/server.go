@@ -19,13 +19,15 @@ func SetupServer(cfg *config.Config) (*gin.Engine, error) {
 		return nil, fmt.Errorf("failed to initialize file storage: %w", err)
 	}
 
-	store := repository.NewURLStore(*fileStorage)
-	err = store.LoadFromStorage()
+	store, err := repository.NewURLStore(*fileStorage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load store: %w", err)
+		return nil, fmt.Errorf("failed to initialize urlStore: %w", err)
 	}
 
-	log, _ := zap.NewProduction()
+	log, err := zap.NewProduction()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create logger: %w", err)
+	}
 	defer log.Sync()
 
 	urlService := service.NewURLService(store, cfg)
