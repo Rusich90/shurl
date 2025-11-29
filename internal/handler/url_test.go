@@ -46,7 +46,7 @@ func TestCreateShortURL(t *testing.T) {
 	}
 
 	urlService := service.NewURLService(store, cfg)
-	handler := NewHandler(urlService, cfg, logger)
+	handler := NewHandler(urlService, cfg, logger, nil)
 
 	gin.SetMode(gin.TestMode)
 
@@ -149,7 +149,7 @@ func TestJsonCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create urlStore: %v", err)
 	}
 	urlService := service.NewURLService(store, cfg)
-	handler := NewHandler(urlService, cfg, logger)
+	handler := NewHandler(urlService, cfg, logger, nil)
 
 	gin.SetMode(gin.TestMode)
 
@@ -322,7 +322,7 @@ func TestGetOriginalURL(t *testing.T) {
 		t.Fatalf("Failed to create urlStore: %v", err)
 	}
 	urlService := service.NewURLService(store, cfg)
-	handler := NewHandler(urlService, cfg, logger)
+	handler := NewHandler(urlService, cfg, logger, nil)
 
 	w1 := httptest.NewRecorder()
 	c1, _ := gin.CreateTestContext(w1)

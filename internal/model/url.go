@@ -12,3 +12,9 @@ type URLRow struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
+
+type PingResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
+}

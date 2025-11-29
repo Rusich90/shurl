@@ -1,11 +1,14 @@
 package handler
 
 import (
+	"context"
+	"database/sql"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/model"
@@ -20,13 +23,15 @@ type Handler struct {
 	urlService *service.URLService
 	cfg        *config.Config
 	logger     *zap.Logger
+	db         *sql.DB
 }
 
-func NewHandler(urlService *service.URLService, cfg *config.Config, logger *zap.Logger) *Handler {
+func NewHandler(urlService *service.URLService, cfg *config.Config, logger *zap.Logger, db *sql.DB) *Handler {
 	return &Handler{
 		urlService: urlService,
 		cfg:        cfg,
 		logger:     logger,
+		db:         db,
 	}
 }
 
@@ -140,4 +145,41 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 	}
 
 	c.Data(http.StatusCreated, "application/json", respBytes)
+}
+
+func (h *Handler) Ping(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.db.PingContext(ctx); err != nil {
+		response := model.PingResponse{
+			Status:  "error",
+			Message: "Database connection failed",
+			Error:   err.Error(),
+		}
+
+		respBytes, marshalErr := easyjson.Marshal(response)
+		if marshalErr != nil {
+			h.logger.Error("Failed to marshal ping error response", zap.Error(marshalErr))
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		c.Data(http.StatusInternalServerError, "application/json", respBytes)
+		return
+	}
+
+	response := model.PingResponse{
+		Status:  "ok",
+		Message: "Database connection successful",
+	}
+
+	respBytes, err := easyjson.Marshal(response)
+	if err != nil {
+		h.logger.Error("Failed to marshal ping success response", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	c.Data(http.StatusOK, "application/json", respBytes)
 }
