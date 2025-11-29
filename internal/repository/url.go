@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/storage"
@@ -10,6 +11,7 @@ import (
 type URLStore struct {
 	urls        map[string]string
 	fileStorage storage.FileStorage
+	mu          sync.Mutex
 }
 
 func NewURLStore(fileStorage storage.FileStorage) (*URLStore, error) {
@@ -26,14 +28,25 @@ func NewURLStore(fileStorage storage.FileStorage) (*URLStore, error) {
 	return &store, nil
 }
 
-func (s *URLStore) SaveWithID(row model.URLRow) {
-	s.urls[row.ShortURL] = row.OriginalURL
-	s.fileStorage.SaveRow(row)
-}
-
 func (s *URLStore) Get(id string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	url, ok := s.urls[id]
 	return url, ok
+}
+
+func (s *URLStore) SaveIfNotExists(row model.URLRow) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.urls[row.ShortURL]; exists {
+		return false
+	}
+
+	s.urls[row.ShortURL] = row.OriginalURL
+	s.fileStorage.SaveRow(row)
+	return true
 }
 
 func (s *URLStore) loadFromStorage() error {

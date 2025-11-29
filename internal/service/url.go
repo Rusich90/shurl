@@ -2,7 +2,6 @@ package service
 
 import (
 	"log"
-	"sync"
 
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/idgen"
@@ -13,7 +12,6 @@ import (
 type URLService struct {
 	repo *repository.URLStore
 	cfg  *config.Config
-	mu   sync.Mutex
 }
 
 func NewURLService(repo *repository.URLStore, cfg *config.Config) *URLService {
@@ -32,13 +30,9 @@ func (s *URLService) CreateShortURL(originalURL string) (string, error) {
 
 		row := model.URLRow{ShortURL: id, OriginalURL: originalURL}
 
-		s.mu.Lock()
-		if _, ok := s.repo.Get(id); !ok {
-			s.repo.SaveWithID(row)
-			s.mu.Unlock()
+		if s.repo.SaveIfNotExists(row) {
 			return id, nil
 		}
-		s.mu.Unlock()
 
 		log.Printf("Collision detected for ID: %s, generating new ID", id)
 	}
