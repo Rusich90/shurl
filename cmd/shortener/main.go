@@ -10,7 +10,10 @@ import (
 func main() {
 	cfg := config.InitConfig()
 
-	r := server.SetupRouter(cfg)
+	r, err := server.SetupServer(cfg)
+	if err != nil {
+		log.Fatalf("Failed to setup server: %v", err)
+	}
 
 	log.Printf("Starting server on %s\n", cfg.ServerAddress)
 	if err := r.Run(cfg.ServerAddress); err != nil {

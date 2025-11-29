@@ -8,6 +8,12 @@ test:
 my-test:
 	go test -v ./...
 
+my-test-cov:
+	go test -v ./... -coverprofile=coverage.out -coverpkg=./...
+
+show-test-cov:
+	go tool cover -html=coverage.out
+
 run:
 	go run cmd/shortener/*.go
 

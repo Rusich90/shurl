@@ -1,22 +1,49 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/handler"
+	"github.com/Rusich90/shurl.git/internal/middleware"
 	"github.com/Rusich90/shurl.git/internal/repository"
 	"github.com/Rusich90/shurl.git/internal/service"
+	"github.com/Rusich90/shurl.git/internal/storage"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
-func SetupRouter(cfg *config.Config) *gin.Engine {
-	store := repository.NewURLStore()
-	urlService := service.NewURLService(store, cfg)
-	urlHandler := handler.NewHandler(urlService, cfg)
+func SetupServer(cfg *config.Config) (*gin.Engine, error) {
+	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize file storage: %w", err)
+	}
 
-	r := gin.Default()
+	store, err := repository.NewURLStore(*fileStorage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize urlStore: %w", err)
+	}
+
+	log, err := zap.NewProduction()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create logger: %w", err)
+	}
+	defer log.Sync()
+
+	urlService := service.NewURLService(store, cfg)
+	urlHandler := handler.NewHandler(urlService, cfg, log)
+
+	r := gin.New()
+	r.Use(middleware.LoggerMiddleware(log))
+	r.Use(middleware.GzipMiddleware())
 
 	r.POST("/", urlHandler.CreateShortURL)
 	r.GET("/:id", urlHandler.GetOriginalURL)
 
-	return r
+	api := r.Group("/api")
+	{
+		api.POST("/shorten", urlHandler.JSONCreateShortURL)
+	}
+
+	return r, nil
 }

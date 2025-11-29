@@ -5,6 +5,7 @@ import (
 
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/idgen"
+	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/repository"
 )
 
@@ -27,8 +28,9 @@ func (s *URLService) CreateShortURL(originalURL string) (string, error) {
 			return "", err
 		}
 
-		if _, ok := s.repo.Get(id); !ok {
-			s.repo.SaveWithID(id, originalURL)
+		row := model.URLRow{ShortURL: id, OriginalURL: originalURL}
+
+		if s.repo.SaveIfNotExists(row) {
 			return id, nil
 		}
 
