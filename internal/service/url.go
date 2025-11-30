@@ -10,11 +10,11 @@ import (
 )
 
 type URLService struct {
-	repo *repository.URLStore
+	repo repository.URLRepository
 	cfg  *config.Config
 }
 
-func NewURLService(repo *repository.URLStore, cfg *config.Config) *URLService {
+func NewURLService(repo repository.URLRepository, cfg *config.Config) *URLService {
 	return &URLService{
 		repo: repo,
 		cfg:  cfg,

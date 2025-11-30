@@ -31,6 +31,7 @@ func TestCreateShortURL(t *testing.T) {
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
 		FileStoragePath: tmpFile.Name(),
+		DatabaseDSN:     "",
 	}
 
 	logger := zap.NewNop()
@@ -40,13 +41,13 @@ func TestCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store, err := repository.NewURLStore(*fileStorage)
+	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
 	if err != nil {
-		t.Fatalf("Failed to create urlStore: %v", err)
+		t.Fatalf("Failed to create file repository: %v", err)
 	}
 
-	urlService := service.NewURLService(store, cfg)
-	handler := NewHandler(urlService, cfg, logger, nil)
+	urlService := service.NewURLService(fileRepo, cfg)
+	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
 
@@ -135,6 +136,7 @@ func TestJsonCreateShortURL(t *testing.T) {
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
 		FileStoragePath: tmpFile.Name(),
+		DatabaseDSN:     "",
 	}
 
 	logger := zap.NewNop()
@@ -144,12 +146,13 @@ func TestJsonCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store, err := repository.NewURLStore(*fileStorage)
+	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
 	if err != nil {
-		t.Fatalf("Failed to create urlStore: %v", err)
+		t.Fatalf("Failed to create file repository: %v", err)
 	}
-	urlService := service.NewURLService(store, cfg)
-	handler := NewHandler(urlService, cfg, logger, nil)
+
+	urlService := service.NewURLService(fileRepo, cfg)
+	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
 
@@ -282,11 +285,9 @@ func TestJsonCreateShortURL(t *testing.T) {
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err, "Error response should be valid JSON")
 
-				// Проверяем наличие поля error
 				errorMsg, exists := response["error"]
 				assert.True(t, exists, "Error response should contain 'error' field")
 
-				// Проверяем текст ошибки
 				errorStr, ok := errorMsg.(string)
 				assert.True(t, ok, "Error message should be a string")
 				assert.Equal(t, tt.expectedError, errorStr, "Error message mismatch")
@@ -308,6 +309,7 @@ func TestGetOriginalURL(t *testing.T) {
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
 		FileStoragePath: tmpFile.Name(),
+		DatabaseDSN:     "",
 	}
 
 	logger := zap.NewNop()
@@ -317,12 +319,13 @@ func TestGetOriginalURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store, err := repository.NewURLStore(*fileStorage)
+	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
 	if err != nil {
-		t.Fatalf("Failed to create urlStore: %v", err)
+		t.Fatalf("Failed to create file repository: %v", err)
 	}
-	urlService := service.NewURLService(store, cfg)
-	handler := NewHandler(urlService, cfg, logger, nil)
+
+	urlService := service.NewURLService(fileRepo, cfg)
+	handler := NewHandler(urlService, cfg, logger)
 
 	w1 := httptest.NewRecorder()
 	c1, _ := gin.CreateTestContext(w1)

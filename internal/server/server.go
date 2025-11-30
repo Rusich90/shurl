@@ -1,8 +1,10 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/handler"
@@ -16,26 +18,35 @@ import (
 )
 
 func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
-	db, err := sql.Open("pgx", cfg.DatabaseDSN)
-	if err != nil {
-		fmt.Println(err)
-		//return nil, nil, fmt.Errorf("failed DB connect: %w", err)
-	}
+	var db *sql.DB
+	var urlRepo repository.URLRepository
 
-	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	//defer cancel()
-	//if err = db.PingContext(ctx); err != nil {
-	//	panic(err)
-	//}
+	if cfg.DatabaseDSN != "" {
+		var err error
+		db, err = sql.Open("pgx", cfg.DatabaseDSN)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed DB connect open: %w", err)
+		}
 
-	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize file storage: %w", err)
-	}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-	store, err := repository.NewURLStore(*fileStorage)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize urlStore: %w", err)
+		if err = db.PingContext(ctx); err != nil {
+			return nil, nil, fmt.Errorf("failed DB ping: %w", err)
+		}
+
+		urlRepo = repository.NewDBURLRepository(db)
+	} else {
+		fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize file storage: %w", err)
+		}
+
+		fileRepo, err := repository.NewFileURLRepository(*fileStorage)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize file repository: %w", err)
+		}
+		urlRepo = fileRepo
 	}
 
 	log, err := zap.NewProduction()
@@ -44,14 +55,17 @@ func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
 	}
 	defer log.Sync()
 
-	urlService := service.NewURLService(store, cfg)
-	urlHandler := handler.NewHandler(urlService, cfg, log, db)
+	urlService := service.NewURLService(urlRepo, cfg)
+	healthService := service.NewHealthService(db)
+
+	urlHandler := handler.NewHandler(urlService, cfg, log)
+	healthHandler := handler.NewHealthHandler(healthService, log)
 
 	r := gin.New()
 	r.Use(middleware.LoggerMiddleware(log))
 	r.Use(middleware.GzipMiddleware())
 
-	r.GET("/ping", urlHandler.Ping)
+	r.GET("/ping", healthHandler.Ping)
 
 	r.POST("/", urlHandler.CreateShortURL)
 	r.GET("/:id", urlHandler.GetOriginalURL)

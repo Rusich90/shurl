@@ -22,7 +22,7 @@ func InitConfig() *Config {
 	flag.StringVar(&config.ServerAddress, "a", "localhost:8080", "HTTP server address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened URLs")
 	flag.StringVar(&config.FileStoragePath, "f", "file_storage.jsonl", "Path to file storage")
-	flag.StringVar(&config.DatabaseDSN, "d", "postgres://user:password@localhost:5432/shurl", "Database DSN")
+	flag.StringVar(&config.DatabaseDSN, "d", "", "Database DSN (if not set, file storage will be used)")
 	flag.Parse()
 
 	if envServAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
