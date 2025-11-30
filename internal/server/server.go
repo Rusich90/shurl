@@ -13,6 +13,9 @@ import (
 	"github.com/Rusich90/shurl.git/internal/service"
 	"github.com/Rusich90/shurl.git/internal/storage"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
@@ -33,6 +36,10 @@ func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
 
 		if err = db.PingContext(ctx); err != nil {
 			return nil, nil, fmt.Errorf("failed DB ping: %w", err)
+		}
+
+		if err = runMigrations(db); err != nil {
+			return nil, nil, fmt.Errorf("failed to run migrations: %w", err)
 		}
 
 		urlRepo = repository.NewDBURLRepository(db)
@@ -76,4 +83,26 @@ func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
 	}
 
 	return r, db, nil
+}
+
+func runMigrations(db *sql.DB) error {
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return fmt.Errorf("failed to create migrate driver: %w", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://migrations",
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create migrate instance: %w", err)
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	return nil
 }
