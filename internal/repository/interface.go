@@ -1,8 +1,13 @@
 package repository
 
-import "github.com/Rusich90/shurl.git/internal/model"
+import (
+	"context"
+
+	"github.com/Rusich90/shurl.git/internal/model"
+)
 
 type URLRepository interface {
-	Get(id string) (string, bool)
-	SaveIfNotExists(row model.URLRow) bool
+	Get(ctx context.Context, id string) (string, bool)
+	SaveIfNotExists(ctx context.Context, row model.URLRow) bool
+	SaveBatch(ctx context.Context, rows []model.URLRow) error
 }

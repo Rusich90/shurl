@@ -38,7 +38,10 @@ func (f *FileStorage) SaveRow(row model.URLRow) error {
 	}
 
 	_, err = file.Write(append(data, '\n'))
-	return fmt.Errorf("failed file.Write: %w", err)
+	if err != nil {
+		return fmt.Errorf("failed file.Write: %w", err)
+	}
+	return nil
 }
 
 func (f *FileStorage) GetURLs() ([]model.URLRow, error) {

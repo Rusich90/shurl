@@ -46,4 +46,7 @@ endif
 	@echo "Creating migration: $(NAME)"
 	migrate create -ext sql -dir $(MIGRATIONS_DIR) $(NAME)
 
+gen-json:
+	cd internal && easyjson -all model/url.go
+
 .PHONY: build test run

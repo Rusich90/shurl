@@ -80,6 +80,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
 	api := r.Group("/api")
 	{
 		api.POST("/shorten", urlHandler.JSONCreateShortURL)
+		api.POST("/shorten/batch", urlHandler.CreateShortBatchURL)
 	}
 
 	return r, db, nil
@@ -92,7 +93,7 @@ func runMigrations(db *sql.DB) error {
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
+		"file://migrations", // TODO: кажется надо тут отрефачить
 		"postgres",
 		driver,
 	)

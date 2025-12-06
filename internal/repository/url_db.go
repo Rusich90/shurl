@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sync"
 
 	"github.com/Rusich90/shurl.git/internal/model"
@@ -19,13 +20,13 @@ func NewDBURLRepository(db *sql.DB) *DBURLRepository {
 	}
 }
 
-func (r *DBURLRepository) Get(id string) (string, bool) {
+func (r *DBURLRepository) Get(ctx context.Context, id string) (string, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	var originalURL string
 	query := `SELECT original_url FROM urls WHERE short_url = $1`
-	err := r.db.QueryRowContext(context.Background(), query, id).Scan(&originalURL)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&originalURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", false
@@ -36,13 +37,13 @@ func (r *DBURLRepository) Get(id string) (string, bool) {
 	return originalURL, true
 }
 
-func (r *DBURLRepository) SaveIfNotExists(row model.URLRow) bool {
+func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM urls WHERE short_url = $1)`
-	err := r.db.QueryRowContext(context.Background(), checkQuery, row.ShortURL).Scan(&exists)
+	err := r.db.QueryRowContext(ctx, checkQuery, row.ShortURL).Scan(&exists)
 	if err != nil {
 		return false
 	}
@@ -52,6 +53,53 @@ func (r *DBURLRepository) SaveIfNotExists(row model.URLRow) bool {
 	}
 
 	insertQuery := `INSERT INTO urls (short_url, original_url) VALUES ($1, $2)`
-	_, err = r.db.ExecContext(context.Background(), insertQuery, row.ShortURL, row.OriginalURL)
+	_, err = r.db.ExecContext(ctx, insertQuery, row.ShortURL, row.OriginalURL)
 	return err == nil
+}
+
+func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	checkStmt, err := tx.PrepareContext(ctx, `SELECT EXISTS(SELECT 1 FROM urls WHERE short_url = $1)`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare check statement: %w", err)
+	}
+	defer checkStmt.Close()
+
+	insertStmt, err := tx.PrepareContext(ctx, `INSERT INTO urls (short_url, original_url) VALUES ($1, $2)`)
+	if err != nil {
+		return fmt.Errorf("failed to prepare insert statement: %w", err)
+	}
+	defer insertStmt.Close()
+
+	for _, row := range rows {
+		var exists bool
+		err := checkStmt.QueryRowContext(ctx, row.ShortURL).Scan(&exists)
+		if err != nil {
+			return fmt.Errorf("failed to check existence of %s: %w", row.ShortURL, err)
+		}
+
+		if exists {
+			return fmt.Errorf("conflict: short URL %s already exists", row.ShortURL)
+		}
+
+		_, err = insertStmt.ExecContext(ctx, row.ShortURL, row.OriginalURL)
+		if err != nil {
+			return fmt.Errorf("failed to insert row %s: %w", row.ShortURL, err)
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/Rusich90/shurl.git/internal/config"
@@ -54,16 +53,10 @@ func (h *Handler) CreateShortURL(c *gin.Context) {
 		return
 	}
 
-	id, err := h.urlService.CreateShortURL(originallURL)
+	shortURL, err := h.urlService.CreateShortURL(c.Request.Context(), originallURL)
 	if err != nil {
 		log.Printf("Failed to create short URL: %v", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
-	}
-
-	shortURL, err := url.JoinPath(h.cfg.BaseURL, id)
-	if err != nil {
-		h.logger.Error("Failed to join URL paths: %v", zap.Error(err))
 		return
 	}
 
@@ -83,7 +76,7 @@ func (h *Handler) GetOriginalURL(c *gin.Context) {
 		return
 	}
 
-	url, ok := h.urlService.GetOriginalURL(id)
+	url, ok := h.urlService.GetOriginalURL(c.Request.Context(), id)
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "URL not found"})
 		return
@@ -116,16 +109,10 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 		return
 	}
 
-	id, err := h.urlService.CreateShortURL(req.URL)
+	shortURL, err := h.urlService.CreateShortURL(c.Request.Context(), req.URL)
 	if err != nil {
 		h.logger.Error("Failed to create short URL: %v", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
-	}
-
-	shortURL, err := url.JoinPath(h.cfg.BaseURL, id)
-	if err != nil {
-		h.logger.Error("Failed to join URL paths: %v", zap.Error(err))
 		return
 	}
 
@@ -135,6 +122,49 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 	respBytes, err := easyjson.Marshal(response)
 	if err != nil {
 		h.logger.Error("Failed to marshal response: %v", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	c.Data(http.StatusCreated, "application/json", respBytes)
+}
+
+func (h *Handler) CreateShortBatchURL(c *gin.Context) {
+	if c.Request.Method != http.MethodPost {
+		c.AbortWithStatus(http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+	defer c.Request.Body.Close()
+
+	var req model.CreateBatchURLRequest
+	if err := easyjson.Unmarshal(body, &req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
+		return
+	}
+
+	for _, item := range req {
+		if err := validators.ValidateCreateBatchURLRequest(item.CorrelationID, item.OriginalURL); err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	results, err := h.urlService.CreateShortBatchURL(c.Request.Context(), req)
+	if err != nil {
+		h.logger.Error("Failed to create batch short URLs", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	respBytes, err := easyjson.Marshal(results)
+	if err != nil {
+		h.logger.Error("Failed to marshal response", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
