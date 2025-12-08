@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
 	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/storage"
 )
@@ -43,23 +44,32 @@ func (r *FileURLRepository) Get(ctx context.Context, id string) (string, bool) {
 	return url, ok
 }
 
-func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) bool {
+func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	select {
 	case <-ctx.Done():
-		return false
+		return ctx.Err()
 	default:
 	}
 
 	if _, exists := r.urls[row.ShortURL]; exists {
-		return false
+		return internalErrors.ErrShortURLConflict
+	}
+
+	for _, originalURL := range r.urls {
+		if originalURL == row.OriginalURL {
+			return internalErrors.ErrOriginalURLConflict
+		}
 	}
 
 	r.urls[row.ShortURL] = row.OriginalURL
 	err := r.fileStorage.SaveRow(row)
-	return err == nil
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *FileURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
@@ -106,4 +116,23 @@ func (r *FileURLRepository) loadFromStorage() error {
 	}
 
 	return nil
+}
+
+func (r *FileURLRepository) GetByOriginalURL(ctx context.Context, originalURL string) (string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return "", false
+	default:
+	}
+
+	for shortURL, url := range r.urls {
+		if url == originalURL {
+			return shortURL, true
+		}
+	}
+
+	return "", false
 }

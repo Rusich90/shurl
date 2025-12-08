@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/Rusich90/shurl.git/internal/config"
+	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
 	"github.com/Rusich90/shurl.git/internal/idgen"
 	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/repository"
@@ -24,24 +25,48 @@ func NewURLService(repo repository.URLRepository, cfg *config.Config) *URLServic
 	}
 }
 
-func (s *URLService) CreateShortURL(ctx context.Context, originalURL string) (string, error) {
+type CreateShortURLResult struct {
+	URL   string
+	IsNew bool
+}
+
+func (s *URLService) CreateShortURL(ctx context.Context, originalURL string) (*CreateShortURLResult, error) {
 	for {
 		id, err := idgen.GenerateID()
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		row := model.URLRow{ShortURL: id, OriginalURL: originalURL}
 
-		if s.repo.SaveIfNotExists(ctx, row) {
-			shortURL, err := url.JoinPath(s.cfg.BaseURL, id)
-			if err != nil {
-				return "", fmt.Errorf("failed to create short URL: %w", err)
+		err = s.repo.SaveIfNotExists(ctx, row)
+		if err != nil {
+			if internalErrors.IsErrOriginalURLConflict(err) {
+				if shortURL, exists := s.repo.GetByOriginalURL(ctx, originalURL); exists {
+					resultURL, err := url.JoinPath(s.cfg.BaseURL, shortURL)
+					if err != nil {
+						return nil, fmt.Errorf("failed to create short URL: %w", err)
+					}
+					return &CreateShortURLResult{
+						URL:   resultURL,
+						IsNew: false,
+					}, nil
+				}
+			} else {
+				log.Printf("Error saving URL: %v, generating new ID", err)
+				continue
 			}
-			return shortURL, nil
 		}
 
-		log.Printf("Collision detected for ID: %s, generating new ID", id)
+		shortURL, err := url.JoinPath(s.cfg.BaseURL, id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create short URL: %w", err)
+		}
+
+		return &CreateShortURLResult{
+			URL:   shortURL,
+			IsNew: true,
+		}, nil
 	}
 }
 

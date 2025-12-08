@@ -3,10 +3,14 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"sync"
 
+	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
 	"github.com/Rusich90/shurl.git/internal/model"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type DBURLRepository struct {
@@ -37,7 +41,7 @@ func (r *DBURLRepository) Get(ctx context.Context, id string) (string, bool) {
 	return originalURL, true
 }
 
-func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) bool {
+func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -45,16 +49,23 @@ func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow)
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM urls WHERE short_url = $1)`
 	err := r.db.QueryRowContext(ctx, checkQuery, row.ShortURL).Scan(&exists)
 	if err != nil {
-		return false
+		return err
 	}
 
 	if exists {
-		return false
+		return internalErrors.ErrShortURLConflict
 	}
 
 	insertQuery := `INSERT INTO urls (short_url, original_url) VALUES ($1, $2)`
 	_, err = r.db.ExecContext(ctx, insertQuery, row.ShortURL, row.OriginalURL)
-	return err == nil
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			return internalErrors.ErrOriginalURLConflict
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
@@ -102,4 +113,21 @@ func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) er
 	}
 
 	return nil
+}
+
+func (r *DBURLRepository) GetByOriginalURL(ctx context.Context, originalURL string) (string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var shortURL string
+	query := `SELECT short_url FROM urls WHERE original_url = $1`
+	err := r.db.QueryRowContext(ctx, query, originalURL).Scan(&shortURL)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", false
+		}
+		return "", false
+	}
+
+	return shortURL, true
 }

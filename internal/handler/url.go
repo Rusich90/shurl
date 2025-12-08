@@ -53,15 +53,20 @@ func (h *Handler) CreateShortURL(c *gin.Context) {
 		return
 	}
 
-	shortURL, err := h.urlService.CreateShortURL(c.Request.Context(), originallURL)
+	result, err := h.urlService.CreateShortURL(c.Request.Context(), originallURL)
 	if err != nil {
 		log.Printf("Failed to create short URL: %v", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
-	c.Status(http.StatusCreated)
-	c.String(http.StatusCreated, shortURL)
+	statusCode := http.StatusCreated
+	if !result.IsNew {
+		statusCode = http.StatusConflict
+	}
+	
+	c.Status(statusCode)
+	c.String(statusCode, result.URL)
 }
 
 func (h *Handler) GetOriginalURL(c *gin.Context) {
@@ -109,15 +114,20 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 		return
 	}
 
-	shortURL, err := h.urlService.CreateShortURL(c.Request.Context(), req.URL)
+	result, err := h.urlService.CreateShortURL(c.Request.Context(), req.URL)
 	if err != nil {
 		h.logger.Error("Failed to create short URL: %v", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
+	statusCode := http.StatusCreated
+	if !result.IsNew {
+		statusCode = http.StatusConflict
+	}
+
 	response := model.CreateURLResponse{
-		Result: shortURL,
+		Result: result.URL,
 	}
 	respBytes, err := easyjson.Marshal(response)
 	if err != nil {
@@ -126,7 +136,7 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 		return
 	}
 
-	c.Data(http.StatusCreated, "application/json", respBytes)
+	c.Data(statusCode, "application/json", respBytes)
 }
 
 func (h *Handler) CreateShortBatchURL(c *gin.Context) {
