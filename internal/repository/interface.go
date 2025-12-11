@@ -11,4 +11,6 @@ type URLRepository interface {
 	SaveIfNotExists(ctx context.Context, row model.URLRow) error
 	SaveBatch(ctx context.Context, rows []model.URLRow) error
 	GetByOriginalURL(ctx context.Context, originalURL string) (string, bool)
+	Close() error
+	Ping(ctx context.Context) error
 }

@@ -136,3 +136,11 @@ func (r *FileURLRepository) GetByOriginalURL(ctx context.Context, originalURL st
 
 	return "", false
 }
+
+func (r *FileURLRepository) Close() error {
+	return nil
+}
+
+func (r *FileURLRepository) Ping(ctx context.Context) error {
+	return nil
+}

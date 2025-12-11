@@ -2,21 +2,54 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"context"
+
+	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
+type MockURLRepository struct {
+	pingError error
+}
+
+func (m *MockURLRepository) Get(ctx context.Context, id string) (string, bool) {
+	return "", false
+}
+
+func (m *MockURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {
+	return nil
+}
+
+func (m *MockURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
+	return nil
+}
+
+func (m *MockURLRepository) GetByOriginalURL(ctx context.Context, originalURL string) (string, bool) {
+	return "", false
+}
+
+func (m *MockURLRepository) Close() error {
+	return nil
+}
+
+func (m *MockURLRepository) Ping(ctx context.Context) error {
+	return m.pingError
+}
+
 func TestPing_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	logger := zap.NewNop()
-	healthService := service.NewHealthService(nil)
+	mockRepo := &MockURLRepository{}
+	healthService := service.NewHealthService(mockRepo)
 
 	handler := NewHealthHandler(healthService, logger)
 
@@ -41,8 +74,9 @@ func TestPing_WithDatabase_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	logger := zap.NewNop()
+	mockRepo := &MockURLRepository{}
 
-	healthService := service.NewHealthService(nil)
+	healthService := service.NewHealthService(mockRepo)
 
 	handler := NewHealthHandler(healthService, logger)
 
@@ -67,8 +101,9 @@ func TestPing_ErrorResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	logger := zap.NewNop()
+	mockRepo := &MockURLRepository{pingError: fmt.Errorf("database error")}
 
-	healthService := service.NewHealthService(nil)
+	healthService := service.NewHealthService(mockRepo)
 
 	handler := NewHealthHandler(healthService, logger)
 
@@ -77,7 +112,7 @@ func TestPing_ErrorResponse(t *testing.T) {
 
 	handler.Ping(c)
 
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
 	var response map[string]interface{}
@@ -88,14 +123,16 @@ func TestPing_ErrorResponse(t *testing.T) {
 	assert.True(t, statusExists)
 
 	status := response["status"].(string)
-	assert.Contains(t, []string{"ok", "error"}, status)
+	assert.Equal(t, "error", status)
 }
 
 func TestPing_ResponseStructure(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	logger := zap.NewNop()
-	healthService := service.NewHealthService(nil)
+	mockRepo := &MockURLRepository{}
+
+	healthService := service.NewHealthService(mockRepo)
 
 	handler := NewHealthHandler(healthService, logger)
 
@@ -114,12 +151,13 @@ func TestPing_ResponseStructure(t *testing.T) {
 	assert.IsType(t, "", response["status"])
 
 	status := response["status"].(string)
-	assert.Contains(t, []string{"ok", "error"}, status)
+	assert.Equal(t, "ok", status)
 }
 
 func TestNewHealthHandler(t *testing.T) {
 	logger := zap.NewNop()
-	healthService := service.NewHealthService(nil)
+	mockRepo := &MockURLRepository{}
+	healthService := service.NewHealthService(mockRepo)
 
 	handler := NewHealthHandler(healthService, logger)
 

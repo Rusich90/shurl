@@ -2,43 +2,49 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/Rusich90/shurl.git/internal/model"
+	"github.com/Rusich90/shurl.git/internal/repository"
 )
 
 type HealthService struct {
-	db *sql.DB
+	storage repository.URLRepository
 }
 
-func NewHealthService(db *sql.DB) *HealthService {
+func NewHealthService(storage repository.URLRepository) *HealthService {
 	return &HealthService{
-		db: db,
+		storage: storage,
 	}
 }
 
 func (s *HealthService) Ping() model.PingResponse {
-	if s.db == nil {
-		return model.PingResponse{
-			Status:  "ok",
-			Message: "Service is running, database not configured",
-		}
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := s.db.PingContext(ctx); err != nil {
+	if err := s.storage.Ping(ctx); err != nil {
 		return model.PingResponse{
 			Status:  "error",
-			Message: "Database connection failed",
+			Message: "Storage connection failed",
 			Error:   err.Error(),
 		}
 	}
 
-	return model.PingResponse{
-		Status:  "ok",
-		Message: "Database connection successful",
+	switch s.storage.(type) {
+	case *repository.DBURLRepository:
+		return model.PingResponse{
+			Status:  "ok",
+			Message: "Database connection successful",
+		}
+	case *repository.FileURLRepository:
+		return model.PingResponse{
+			Status:  "ok",
+			Message: "Service is running, file storage configured",
+		}
+	default:
+		return model.PingResponse{
+			Status:  "ok",
+			Message: "Service is running",
+		}
 	}
 }

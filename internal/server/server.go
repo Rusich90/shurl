@@ -20,7 +20,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
+func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, error) {
 	var db *sql.DB
 	var urlRepo repository.URLRepository
 
@@ -38,7 +38,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
 			return nil, nil, fmt.Errorf("failed DB ping: %w", err)
 		}
 
-		if err = runMigrations(db); err != nil {
+		if err = runMigrations(db, cfg); err != nil {
 			return nil, nil, fmt.Errorf("failed to run migrations: %w", err)
 		}
 
@@ -63,7 +63,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
 	defer log.Sync()
 
 	urlService := service.NewURLService(urlRepo, cfg)
-	healthService := service.NewHealthService(db)
+	healthService := service.NewHealthService(urlRepo)
 
 	urlHandler := handler.NewHandler(urlService, cfg, log)
 	healthHandler := handler.NewHealthHandler(healthService, log)
@@ -83,17 +83,17 @@ func SetupServer(cfg *config.Config) (*gin.Engine, *sql.DB, error) {
 		api.POST("/shorten/batch", urlHandler.CreateShortBatchURL)
 	}
 
-	return r, db, nil
+	return r, urlRepo, nil
 }
 
-func runMigrations(db *sql.DB) error {
+func runMigrations(db *sql.DB, cfg *config.Config) error {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to create migrate driver: %w", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations", // TODO: кажется надо тут отрефачить
+		cfg.MigrationsPath,
 		"postgres",
 		driver,
 	)

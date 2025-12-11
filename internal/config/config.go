@@ -12,6 +12,7 @@ type Config struct {
 	BaseURL         string
 	FileStoragePath string
 	DatabaseDSN     string
+	MigrationsPath  string
 }
 
 func InitConfig() *Config {
@@ -23,6 +24,7 @@ func InitConfig() *Config {
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened URLs")
 	flag.StringVar(&config.FileStoragePath, "f", "file_storage.jsonl", "Path to file storage")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "Database DSN (if not set, file storage will be used)")
+	flag.StringVar(&config.MigrationsPath, "m", "file://migrations", "Path to migrations")
 	flag.Parse()
 
 	if envServAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
@@ -39,6 +41,10 @@ func InitConfig() *Config {
 
 	if envDatabaseDSN, exists := os.LookupEnv("DATABASE_DSN"); exists {
 		config.DatabaseDSN = envDatabaseDSN
+	}
+
+	if envMigrationsPath, exists := os.LookupEnv("MIGRATIONS_PATH"); exists {
+		config.MigrationsPath = envMigrationsPath
 	}
 
 	return config
