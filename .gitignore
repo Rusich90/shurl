@@ -23,3 +23,5 @@ vendor/
 .vscode
 
 file_storage.jsonl
+
+.env

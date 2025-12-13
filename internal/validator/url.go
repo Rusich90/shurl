@@ -23,3 +23,12 @@ func ValidateCreateURLRequest(urlField string) error {
 
 	return nil
 }
+
+func ValidateCreateBatchURLRequest(correlationID, urlField string) error {
+	correlationID = strings.TrimSpace(correlationID)
+	if correlationID == "" {
+		return fmt.Errorf("correlation_id is required")
+	}
+
+	return ValidateCreateURLRequest(urlField)
+}

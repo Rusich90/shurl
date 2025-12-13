@@ -31,6 +31,7 @@ func TestCreateShortURL(t *testing.T) {
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
 		FileStoragePath: tmpFile.Name(),
+		DatabaseDSN:     "",
 	}
 
 	logger := zap.NewNop()
@@ -40,12 +41,12 @@ func TestCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store, err := repository.NewURLStore(*fileStorage)
+	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
 	if err != nil {
-		t.Fatalf("Failed to create urlStore: %v", err)
+		t.Fatalf("Failed to create file repository: %v", err)
 	}
 
-	urlService := service.NewURLService(store, cfg)
+	urlService := service.NewURLService(fileRepo, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
@@ -56,6 +57,7 @@ func TestCreateShortURL(t *testing.T) {
 		body           string
 		expectedStatus int
 		checkResponse  bool
+		setupFunc      func()
 	}{
 		{
 			name:           "successful creation",
@@ -63,6 +65,27 @@ func TestCreateShortURL(t *testing.T) {
 			body:           "https://example.com",
 			expectedStatus: http.StatusCreated,
 			checkResponse:  true,
+		},
+		{
+			name:           "successful creation with conflict",
+			method:         http.MethodPost,
+			body:           "https://example.com/conflict",
+			expectedStatus: http.StatusConflict,
+			checkResponse:  true,
+			setupFunc: func() {
+				w := httptest.NewRecorder()
+				c, _ := gin.CreateTestContext(w)
+				var err error
+				c.Request, err = http.NewRequest(http.MethodPost, "/", strings.NewReader("https://example.com/conflict"))
+				if err != nil {
+					t.Fatalf("Failed to create request: %v", err)
+				}
+				handler.CreateShortURL(c)
+
+				if w.Code != http.StatusCreated {
+					t.Fatalf("Expected status %d for setup, got %d", http.StatusCreated, w.Code)
+				}
+			},
 		},
 		{
 			name:           "wrong method",
@@ -89,6 +112,10 @@ func TestCreateShortURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.setupFunc != nil {
+				tt.setupFunc()
+			}
+
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			var err error
@@ -103,7 +130,7 @@ func TestCreateShortURL(t *testing.T) {
 				t.Fatalf("Expected status %d, got %d", tt.expectedStatus, w.Code)
 			}
 
-			if tt.checkResponse && w.Code == http.StatusCreated {
+			if tt.checkResponse && (w.Code == http.StatusCreated || w.Code == http.StatusConflict) {
 				expectedContentType := "text/plain; charset=utf-8"
 				if contentType := w.Header().Get("Content-Type"); contentType != expectedContentType {
 					t.Errorf("Expected Content-Type %s, got %s", expectedContentType, contentType)
@@ -135,6 +162,7 @@ func TestJsonCreateShortURL(t *testing.T) {
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
 		FileStoragePath: tmpFile.Name(),
+		DatabaseDSN:     "",
 	}
 
 	logger := zap.NewNop()
@@ -144,11 +172,12 @@ func TestJsonCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store, err := repository.NewURLStore(*fileStorage)
+	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
 	if err != nil {
-		t.Fatalf("Failed to create urlStore: %v", err)
+		t.Fatalf("Failed to create file repository: %v", err)
 	}
-	urlService := service.NewURLService(store, cfg)
+
+	urlService := service.NewURLService(fileRepo, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
@@ -161,6 +190,7 @@ func TestJsonCreateShortURL(t *testing.T) {
 		expectedStatus int
 		checkResponse  bool
 		expectedError  string
+		setupFunc      func() // Функция для подготовки тестовых данных
 	}{
 		{
 			name:           "successful creation with valid JSON",
@@ -169,6 +199,29 @@ func TestJsonCreateShortURL(t *testing.T) {
 			contentType:    "application/json",
 			expectedStatus: http.StatusCreated,
 			checkResponse:  true,
+		},
+		{
+			name:           "successful creation with conflict",
+			method:         http.MethodPost,
+			body:           `{"url":"https://example.com/conflict-json"}`,
+			contentType:    "application/json",
+			expectedStatus: http.StatusConflict,
+			checkResponse:  true,
+			setupFunc: func() {
+				w := httptest.NewRecorder()
+				c, _ := gin.CreateTestContext(w)
+				var err error
+				c.Request, err = http.NewRequest(http.MethodPost, "/api/shorten", bytes.NewBufferString(`{"url":"https://example.com/conflict-json"}`))
+				if err != nil {
+					t.Fatalf("Failed to create request: %v", err)
+				}
+				c.Request.Header.Set("Content-Type", "application/json")
+				handler.JSONCreateShortURL(c)
+
+				if w.Code != http.StatusCreated {
+					t.Fatalf("Expected status %d for setup, got %d", http.StatusCreated, w.Code)
+				}
+			},
 		},
 		{
 			name:           "wrong method",
@@ -236,13 +289,17 @@ func TestJsonCreateShortURL(t *testing.T) {
 			method:         http.MethodPost,
 			body:           `{"url":"https://example.com"}`,
 			contentType:    "application/json",
-			expectedStatus: http.StatusCreated,
+			expectedStatus: http.StatusConflict,
 			checkResponse:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.setupFunc != nil {
+				tt.setupFunc()
+			}
+
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			var err error
@@ -258,7 +315,7 @@ func TestJsonCreateShortURL(t *testing.T) {
 
 			assert.Equal(t, tt.expectedStatus, w.Code, "Status code mismatch")
 
-			if tt.checkResponse && w.Code == http.StatusCreated {
+			if tt.checkResponse && (w.Code == http.StatusCreated || w.Code == http.StatusConflict) {
 				expectedContentType := "application/json"
 				contentType := w.Header().Get("Content-Type")
 				assert.Contains(t, contentType, expectedContentType, "Content-Type should be application/json")
@@ -277,16 +334,13 @@ func TestJsonCreateShortURL(t *testing.T) {
 			}
 
 			if tt.expectedError != "" && w.Code >= 400 {
-				// Проверяем структуру ошибки
 				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err, "Error response should be valid JSON")
 
-				// Проверяем наличие поля error
 				errorMsg, exists := response["error"]
 				assert.True(t, exists, "Error response should contain 'error' field")
 
-				// Проверяем текст ошибки
 				errorStr, ok := errorMsg.(string)
 				assert.True(t, ok, "Error message should be a string")
 				assert.Equal(t, tt.expectedError, errorStr, "Error message mismatch")
@@ -308,6 +362,7 @@ func TestGetOriginalURL(t *testing.T) {
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
 		FileStoragePath: tmpFile.Name(),
+		DatabaseDSN:     "",
 	}
 
 	logger := zap.NewNop()
@@ -317,11 +372,12 @@ func TestGetOriginalURL(t *testing.T) {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	store, err := repository.NewURLStore(*fileStorage)
+	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
 	if err != nil {
-		t.Fatalf("Failed to create urlStore: %v", err)
+		t.Fatalf("Failed to create file repository: %v", err)
 	}
-	urlService := service.NewURLService(store, cfg)
+
+	urlService := service.NewURLService(fileRepo, cfg)
 	handler := NewHandler(urlService, cfg, logger)
 
 	w1 := httptest.NewRecorder()

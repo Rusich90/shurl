@@ -17,7 +17,170 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel(in *jlexer.Lexer, out *CreateURLResponse) {
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel(in *jlexer.Lexer, out *URLRow) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "short_url":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ShortURL = string(in.String())
+			}
+		case "original_url":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.OriginalURL = string(in.String())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel(out *jwriter.Writer, in URLRow) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"short_url\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.ShortURL))
+	}
+	{
+		const prefix string = ",\"original_url\":"
+		out.RawString(prefix)
+		out.String(string(in.OriginalURL))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v URLRow) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v URLRow) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *URLRow) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *URLRow) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel(l, v)
+}
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel1(in *jlexer.Lexer, out *PingResponse) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "status":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Status = string(in.String())
+			}
+		case "message":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Message = string(in.String())
+			}
+		case "error":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Error = string(in.String())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel1(out *jwriter.Writer, in PingResponse) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"status\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.Status))
+	}
+	{
+		const prefix string = ",\"message\":"
+		out.RawString(prefix)
+		out.String(string(in.Message))
+	}
+	if in.Error != "" {
+		const prefix string = ",\"error\":"
+		out.RawString(prefix)
+		out.String(string(in.Error))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v PingResponse) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel1(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v PingResponse) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel1(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *PingResponse) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel1(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *PingResponse) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel1(l, v)
+}
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel2(in *jlexer.Lexer, out *CreateURLResponse) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -47,7 +210,7 @@ func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel(in *jlexer.Lex
 		in.Consumed()
 	}
 }
-func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel(out *jwriter.Writer, in CreateURLResponse) {
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel2(out *jwriter.Writer, in CreateURLResponse) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -62,27 +225,27 @@ func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel(out *jwriter.W
 // MarshalJSON supports json.Marshaler interface
 func (v CreateURLResponse) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel(&w, v)
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel2(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v CreateURLResponse) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel(w, v)
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel2(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *CreateURLResponse) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel(&r, v)
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel2(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *CreateURLResponse) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel(l, v)
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel2(l, v)
 }
-func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel1(in *jlexer.Lexer, out *CreateURLRequest) {
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel3(in *jlexer.Lexer, out *CreateURLRequest) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -112,7 +275,7 @@ func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel1(in *jlexer.Le
 		in.Consumed()
 	}
 }
-func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel1(out *jwriter.Writer, in CreateURLRequest) {
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel3(out *jwriter.Writer, in CreateURLRequest) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -127,23 +290,315 @@ func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel1(out *jwriter.
 // MarshalJSON supports json.Marshaler interface
 func (v CreateURLRequest) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel1(&w, v)
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel3(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v CreateURLRequest) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel1(w, v)
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel3(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *CreateURLRequest) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel1(&r, v)
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel3(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *CreateURLRequest) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel1(l, v)
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel3(l, v)
+}
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel4(in *jlexer.Lexer, out *CreateBatchURLResponse) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		in.Skip()
+		*out = nil
+	} else {
+		in.Delim('[')
+		if *out == nil {
+			if !in.IsDelim(']') {
+				*out = make(CreateBatchURLResponse, 0, 2)
+			} else {
+				*out = CreateBatchURLResponse{}
+			}
+		} else {
+			*out = (*out)[:0]
+		}
+		for !in.IsDelim(']') {
+			var v1 BatchURLResponseItem
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				(v1).UnmarshalEasyJSON(in)
+			}
+			*out = append(*out, v1)
+			in.WantComma()
+		}
+		in.Delim(']')
+	}
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel4(out *jwriter.Writer, in CreateBatchURLResponse) {
+	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		out.RawString("null")
+	} else {
+		out.RawByte('[')
+		for v2, v3 := range in {
+			if v2 > 0 {
+				out.RawByte(',')
+			}
+			(v3).MarshalEasyJSON(out)
+		}
+		out.RawByte(']')
+	}
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v CreateBatchURLResponse) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel4(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v CreateBatchURLResponse) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel4(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *CreateBatchURLResponse) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel4(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *CreateBatchURLResponse) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel4(l, v)
+}
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel5(in *jlexer.Lexer, out *CreateBatchURLRequestItem) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "correlation_id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.CorrelationID = string(in.String())
+			}
+		case "original_url":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.OriginalURL = string(in.String())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel5(out *jwriter.Writer, in CreateBatchURLRequestItem) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"correlation_id\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.CorrelationID))
+	}
+	{
+		const prefix string = ",\"original_url\":"
+		out.RawString(prefix)
+		out.String(string(in.OriginalURL))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v CreateBatchURLRequestItem) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel5(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v CreateBatchURLRequestItem) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel5(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *CreateBatchURLRequestItem) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel5(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *CreateBatchURLRequestItem) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel5(l, v)
+}
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel6(in *jlexer.Lexer, out *CreateBatchURLRequest) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		in.Skip()
+		*out = nil
+	} else {
+		in.Delim('[')
+		if *out == nil {
+			if !in.IsDelim(']') {
+				*out = make(CreateBatchURLRequest, 0, 2)
+			} else {
+				*out = CreateBatchURLRequest{}
+			}
+		} else {
+			*out = (*out)[:0]
+		}
+		for !in.IsDelim(']') {
+			var v4 CreateBatchURLRequestItem
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				(v4).UnmarshalEasyJSON(in)
+			}
+			*out = append(*out, v4)
+			in.WantComma()
+		}
+		in.Delim(']')
+	}
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel6(out *jwriter.Writer, in CreateBatchURLRequest) {
+	if in == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		out.RawString("null")
+	} else {
+		out.RawByte('[')
+		for v5, v6 := range in {
+			if v5 > 0 {
+				out.RawByte(',')
+			}
+			(v6).MarshalEasyJSON(out)
+		}
+		out.RawByte(']')
+	}
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v CreateBatchURLRequest) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel6(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v CreateBatchURLRequest) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel6(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *CreateBatchURLRequest) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel6(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *CreateBatchURLRequest) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel6(l, v)
+}
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel7(in *jlexer.Lexer, out *BatchURLResponseItem) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "correlation_id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.CorrelationID = string(in.String())
+			}
+		case "short_url":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ShortURL = string(in.String())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel7(out *jwriter.Writer, in BatchURLResponseItem) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"correlation_id\":"
+		out.RawString(prefix[1:])
+		out.String(string(in.CorrelationID))
+	}
+	{
+		const prefix string = ",\"short_url\":"
+		out.RawString(prefix)
+		out.String(string(in.ShortURL))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v BatchURLResponseItem) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel7(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v BatchURLResponseItem) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalModel7(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *BatchURLResponseItem) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel7(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *BatchURLResponseItem) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalModel7(l, v)
 }
