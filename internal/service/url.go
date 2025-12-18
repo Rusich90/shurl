@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/Rusich90/shurl.git/internal/config"
+	domain "github.com/Rusich90/shurl.git/internal/domain/url"
 	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
 	"github.com/Rusich90/shurl.git/internal/idgen"
 	"github.com/Rusich90/shurl.git/internal/model"
@@ -30,14 +31,14 @@ type CreateShortURLResult struct {
 	IsNew bool
 }
 
-func (s *URLService) CreateShortURL(ctx context.Context, originalURL string) (*CreateShortURLResult, error) {
+func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, userID string) (*CreateShortURLResult, error) {
 	for {
 		id, err := idgen.GenerateID()
 		if err != nil {
 			return nil, err
 		}
 
-		row := model.URLRow{ShortURL: id, OriginalURL: originalURL}
+		row := model.URLRow{ShortURL: id, OriginalURL: originalURL, UserID: userID}
 
 		err = s.repo.SaveIfNotExists(ctx, row)
 		if err != nil {
@@ -70,7 +71,7 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string) (*C
 	}
 }
 
-func (s *URLService) CreateShortBatchURL(ctx context.Context, request model.CreateBatchURLRequest) (model.CreateBatchURLResponse, error) {
+func (s *URLService) CreateShortBatchURL(ctx context.Context, request model.CreateBatchURLRequest, userID string) (model.CreateBatchURLResponse, error) {
 	var urlRows []model.URLRow
 	var responses model.CreateBatchURLResponse
 
@@ -99,6 +100,7 @@ func (s *URLService) CreateShortBatchURL(ctx context.Context, request model.Crea
 		row := model.URLRow{
 			ShortURL:    id,
 			OriginalURL: req.OriginalURL,
+			UserID:      userID,
 		}
 		urlRows = append(urlRows, row)
 
@@ -123,4 +125,8 @@ func (s *URLService) CreateShortBatchURL(ctx context.Context, request model.Crea
 
 func (s *URLService) GetOriginalURL(ctx context.Context, id string) (string, bool) {
 	return s.repo.Get(ctx, id)
+}
+
+func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID string) ([]domain.URL, error) {
+	return s.repo.GetAllByUserID(ctx, userID)
 }

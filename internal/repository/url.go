@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	domain "github.com/Rusich90/shurl.git/internal/domain/url"
 	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
 	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/storage"
@@ -14,6 +15,11 @@ type FileURLRepository struct {
 	urls        map[string]string
 	fileStorage storage.FileStorage
 	mu          sync.Mutex
+}
+
+func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]domain.URL, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func NewFileURLRepository(fileStorage storage.FileStorage) (*FileURLRepository, error) {

@@ -11,6 +11,7 @@ import (
 	"github.com/Rusich90/shurl.git/internal/middleware"
 	"github.com/Rusich90/shurl.git/internal/repository"
 	"github.com/Rusich90/shurl.git/internal/service"
+	"github.com/Rusich90/shurl.git/internal/service/auth"
 	"github.com/Rusich90/shurl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
@@ -62,6 +63,8 @@ func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, err
 	}
 	defer log.Sync()
 
+	authService := auth.NewAuthService(cfg.AuthSecret)
+
 	urlService := service.NewURLService(urlRepo, cfg)
 	healthService := service.NewHealthService(urlRepo)
 
@@ -71,6 +74,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, err
 	r := gin.New()
 	r.Use(middleware.LoggerMiddleware(log))
 	r.Use(middleware.GzipMiddleware())
+	r.Use(middleware.AuthMiddleware(authService, log))
 
 	r.GET("/ping", healthHandler.Ping)
 
@@ -81,6 +85,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, err
 	{
 		api.POST("/shorten", urlHandler.JSONCreateShortURL)
 		api.POST("/shorten/batch", urlHandler.CreateShortBatchURL)
+		api.GET("/user/urls", urlHandler.GetUserOriginalURLs)
 	}
 
 	return r, urlRepo, nil

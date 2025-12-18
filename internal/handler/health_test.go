@@ -1,14 +1,14 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"context"
-
+	domain "github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/service"
 	"github.com/gin-gonic/gin"
@@ -20,8 +20,17 @@ type MockURLRepository struct {
 	pingError error
 }
 
+func (m *MockURLRepository) GetUserURLs(ctx context.Context, userID string) (string, bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (m *MockURLRepository) Get(ctx context.Context, id string) (string, bool) {
 	return "", false
+}
+
+func (m *MockURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]domain.URL, error) {
+	return nil, nil
 }
 
 func (m *MockURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {

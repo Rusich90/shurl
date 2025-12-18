@@ -13,6 +13,7 @@ type Config struct {
 	FileStoragePath string
 	DatabaseDSN     string
 	MigrationsPath  string
+	AuthSecret      string
 }
 
 func InitConfig() *Config {
@@ -25,6 +26,7 @@ func InitConfig() *Config {
 	flag.StringVar(&config.FileStoragePath, "f", "file_storage.jsonl", "Path to file storage")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "Database DSN (if not set, file storage will be used)")
 	flag.StringVar(&config.MigrationsPath, "m", "file://migrations", "Path to migrations")
+	flag.StringVar(&config.AuthSecret, "s", "default_secret_key", "Secret key for JWT signing")
 	flag.Parse()
 
 	if envServAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
@@ -45,6 +47,10 @@ func InitConfig() *Config {
 
 	if envMigrationsPath, exists := os.LookupEnv("MIGRATIONS_PATH"); exists {
 		config.MigrationsPath = envMigrationsPath
+	}
+
+	if envAuthSecret, exists := os.LookupEnv("AUTH_SECRET"); exists {
+		config.AuthSecret = envAuthSecret
 	}
 
 	return config
