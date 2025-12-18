@@ -7,19 +7,17 @@ import (
 	"net/url"
 
 	"github.com/Rusich90/shurl.git/internal/config"
-	domain "github.com/Rusich90/shurl.git/internal/domain/url"
-	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
+	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/idgen"
-	"github.com/Rusich90/shurl.git/internal/model"
-	"github.com/Rusich90/shurl.git/internal/repository"
+	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
 )
 
 type URLService struct {
-	repo repository.URLRepository
+	repo domainurl.URLRepository
 	cfg  *config.Config
 }
 
-func NewURLService(repo repository.URLRepository, cfg *config.Config) *URLService {
+func NewURLService(repo domainurl.URLRepository, cfg *config.Config) *URLService {
 	return &URLService{
 		repo: repo,
 		cfg:  cfg,
@@ -38,11 +36,11 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, use
 			return nil, err
 		}
 
-		row := model.URLRow{ShortURL: id, OriginalURL: originalURL, UserID: userID}
+		row := dto.URLRow{ShortURL: id, OriginalURL: originalURL, UserID: userID}
 
 		err = s.repo.SaveIfNotExists(ctx, row)
 		if err != nil {
-			if internalErrors.IsErrOriginalURLConflict(err) {
+			if domainurl.IsErrOriginalURLConflict(err) {
 				if shortURL, exists := s.repo.GetByOriginalURL(ctx, originalURL); exists {
 					resultURL, err := url.JoinPath(s.cfg.BaseURL, shortURL)
 					if err != nil {
@@ -71,9 +69,9 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, use
 	}
 }
 
-func (s *URLService) CreateShortBatchURL(ctx context.Context, request model.CreateBatchURLRequest, userID string) (model.CreateBatchURLResponse, error) {
-	var urlRows []model.URLRow
-	var responses model.CreateBatchURLResponse
+func (s *URLService) CreateShortBatchURL(ctx context.Context, request dto.CreateBatchURLRequest, userID string) (dto.CreateBatchURLResponse, error) {
+	var urlRows []dto.URLRow
+	var responses dto.CreateBatchURLResponse
 
 	for _, req := range request {
 		var id string
@@ -97,7 +95,7 @@ func (s *URLService) CreateShortBatchURL(ctx context.Context, request model.Crea
 			return nil, fmt.Errorf("failed to generate unique ID after %d attempts", maxAttempts)
 		}
 
-		row := model.URLRow{
+		row := dto.URLRow{
 			ShortURL:    id,
 			OriginalURL: req.OriginalURL,
 			UserID:      userID,
@@ -109,7 +107,7 @@ func (s *URLService) CreateShortBatchURL(ctx context.Context, request model.Crea
 			return nil, fmt.Errorf("failed to create short URL: %w", err)
 		}
 
-		responses = append(responses, model.BatchURLResponseItem{
+		responses = append(responses, dto.BatchURLResponseItem{
 			CorrelationID: req.CorrelationID,
 			ShortURL:      shortURL,
 		})
@@ -127,6 +125,6 @@ func (s *URLService) GetOriginalURL(ctx context.Context, id string) (string, boo
 	return s.repo.Get(ctx, id)
 }
 
-func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID string) ([]domain.URL, error) {
+func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID string) ([]domainurl.URL, error) {
 	return s.repo.GetAllByUserID(ctx, userID)
 }

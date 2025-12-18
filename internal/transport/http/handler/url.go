@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/Rusich90/shurl.git/internal/config"
-	"github.com/Rusich90/shurl.git/internal/httpctx"
-	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/service"
-	validators "github.com/Rusich90/shurl.git/internal/validator"
+	"github.com/Rusich90/shurl.git/internal/transport/http/ctx"
+	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
+	"github.com/Rusich90/shurl.git/internal/transport/http/validator"
 	"github.com/gin-gonic/gin"
 	"github.com/mailru/easyjson"
 	"go.uber.org/zap"
@@ -55,7 +55,7 @@ func (h *Handler) CreateShortURL(c *gin.Context) {
 		return
 	}
 
-	userID, _ := httpctx.GetUserID(c)
+	userID, _ := ctx.GetUserID(c)
 	result, err := h.urlService.CreateShortURL(c.Request.Context(), originalURL, userID)
 	if err != nil {
 		log.Printf("Failed to create short URL: %v", err)
@@ -99,7 +99,7 @@ func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 		return
 	}
 
-	userID, _ := httpctx.GetUserID(c)
+	userID, _ := ctx.GetUserID(c)
 	if userID == "" {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -116,10 +116,10 @@ func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 		return
 	}
 
-	var response model.UserURLsResponse
+	var response dto.UserURLsResponse
 	for _, domainURL := range urls {
 		shortURL, _ := url.JoinPath(h.cfg.BaseURL, domainURL.ShortURL) // TODO: Переделать и вынести сборку в сервис
-		response = append(response, model.URLResponse{
+		response = append(response, dto.URLResponse{
 			ShortURL:    shortURL,
 			OriginalURL: domainURL.OriginalURL,
 		})
@@ -149,7 +149,7 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 	}
 	defer c.Request.Body.Close()
 
-	var req model.CreateURLRequest
+	var req dto.CreateURLRequest
 	if err := easyjson.Unmarshal(body, &req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
 		return
@@ -160,7 +160,7 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 		return
 	}
 
-	userID, _ := httpctx.GetUserID(c)
+	userID, _ := ctx.GetUserID(c)
 	result, err := h.urlService.CreateShortURL(c.Request.Context(), req.URL, userID)
 	if err != nil {
 		h.logger.Error("Failed to create short URL: %v", zap.Error(err))
@@ -173,7 +173,7 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 		statusCode = http.StatusConflict
 	}
 
-	response := model.CreateURLResponse{
+	response := dto.CreateURLResponse{
 		Result: result.URL,
 	}
 	respBytes, err := easyjson.Marshal(response)
@@ -199,7 +199,7 @@ func (h *Handler) CreateShortBatchURL(c *gin.Context) {
 	}
 	defer c.Request.Body.Close()
 
-	var req model.CreateBatchURLRequest
+	var req dto.CreateBatchURLRequest
 	if err := easyjson.Unmarshal(body, &req); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
 		return
@@ -212,7 +212,7 @@ func (h *Handler) CreateShortBatchURL(c *gin.Context) {
 		}
 	}
 
-	userID, _ := httpctx.GetUserID(c)
+	userID, _ := ctx.GetUserID(c)
 	results, err := h.urlService.CreateShortBatchURL(c.Request.Context(), req, userID)
 	if err != nil {
 		h.logger.Error("Failed to create batch short URLs", zap.Error(err))

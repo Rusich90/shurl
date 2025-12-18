@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	domain "github.com/Rusich90/shurl.git/internal/domain/url"
-	"github.com/Rusich90/shurl.git/internal/model"
 	"github.com/Rusich90/shurl.git/internal/service"
+	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -33,11 +33,11 @@ func (m *MockURLRepository) GetAllByUserID(ctx context.Context, userID string) (
 	return nil, nil
 }
 
-func (m *MockURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {
+func (m *MockURLRepository) SaveIfNotExists(ctx context.Context, row dto.URLRow) error {
 	return nil
 }
 
-func (m *MockURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
+func (m *MockURLRepository) SaveBatch(ctx context.Context, rows []dto.URLRow) error {
 	return nil
 }
 

@@ -1,28 +1,26 @@
-package repository
+package file
 
 import (
 	"context"
 	"fmt"
 	"sync"
 
-	domain "github.com/Rusich90/shurl.git/internal/domain/url"
-	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
-	"github.com/Rusich90/shurl.git/internal/model"
-	"github.com/Rusich90/shurl.git/internal/storage"
+	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
+	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
 )
 
 type FileURLRepository struct {
 	urls        map[string]string
-	fileStorage storage.FileStorage
+	fileStorage FileStorage
 	mu          sync.Mutex
 }
 
-func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]domain.URL, error) {
+func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]domainurl.URL, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func NewFileURLRepository(fileStorage storage.FileStorage) (*FileURLRepository, error) {
+func NewFileURLRepository(fileStorage FileStorage) (*FileURLRepository, error) {
 	repo := &FileURLRepository{
 		urls:        make(map[string]string),
 		fileStorage: fileStorage,
@@ -50,7 +48,7 @@ func (r *FileURLRepository) Get(ctx context.Context, id string) (string, bool) {
 	return url, ok
 }
 
-func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {
+func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row dto.URLRow) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -61,12 +59,12 @@ func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRo
 	}
 
 	if _, exists := r.urls[row.ShortURL]; exists {
-		return internalErrors.ErrShortURLConflict
+		return domainurl.ErrShortURLConflict
 	}
 
 	for _, originalURL := range r.urls {
 		if originalURL == row.OriginalURL {
-			return internalErrors.ErrOriginalURLConflict
+			return domainurl.ErrOriginalURLConflict
 		}
 	}
 
@@ -78,7 +76,7 @@ func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRo
 	return nil
 }
 
-func (r *FileURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
+func (r *FileURLRepository) SaveBatch(ctx context.Context, rows []dto.URLRow) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

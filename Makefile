@@ -47,6 +47,6 @@ endif
 	migrate create -ext sql -dir $(MIGRATIONS_DIR) $(NAME)
 
 gen-json:
-	cd internal && easyjson -all model/url.go
+	cd internal/transport/http && easyjson -all dto/url.go
 
 .PHONY: build test run

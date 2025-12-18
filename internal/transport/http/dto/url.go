@@ -1,4 +1,4 @@
-package model
+package dto
 
 type CreateURLRequest struct {
 	URL string `json:"url" binding:"required,url"`

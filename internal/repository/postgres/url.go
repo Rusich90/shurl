@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	"context"
@@ -6,9 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	domain "github.com/Rusich90/shurl.git/internal/domain/url"
-	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
-	"github.com/Rusich90/shurl.git/internal/model"
+	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
+	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -37,7 +36,7 @@ func (r *DBURLRepository) Get(ctx context.Context, id string) (string, bool) {
 	return originalURL, true
 }
 
-func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]domain.URL, error) {
+func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]domainurl.URL, error) {
 	query := `
 		SELECT short_url, original_url
 		FROM urls 
@@ -50,10 +49,10 @@ func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]
 	}
 	defer rows.Close()
 
-	urls := make([]domain.URL, 0)
+	urls := make([]domainurl.URL, 0)
 
 	for rows.Next() {
-		var u domain.URL
+		var u domainurl.URL
 		if err := rows.Scan(&u.ShortURL, &u.OriginalURL); err != nil {
 			return nil, err
 		}
@@ -67,7 +66,7 @@ func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]
 	return urls, nil
 }
 
-func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {
+func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row dto.URLRow) error {
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM urls WHERE short_url = $1)`
 	err := r.db.QueryRowContext(ctx, checkQuery, row.ShortURL).Scan(&exists)
@@ -76,7 +75,7 @@ func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow)
 	}
 
 	if exists {
-		return internalErrors.ErrShortURLConflict
+		return domainurl.ErrShortURLConflict
 	}
 
 	insertQuery := `INSERT INTO urls (short_url, original_url, user_id) VALUES ($1, $2, $3)`
@@ -84,14 +83,14 @@ func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return internalErrors.ErrOriginalURLConflict
+			return domainurl.ErrOriginalURLConflict
 		}
 		return err
 	}
 	return nil
 }
 
-func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
+func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []dto.URLRow) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
