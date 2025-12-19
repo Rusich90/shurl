@@ -100,7 +100,6 @@ func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 	}
 
 	userID, _ := ctx.GetUserID(c)
-	log.Printf("GetUserOriginalURLs: userID: %s", userID)
 	if userID == nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return

@@ -22,7 +22,7 @@ func AuthMiddleware(authService *auth.AuthService, logger *zap.Logger) gin.Handl
 		if err != nil {
 			c.Set("userID", (*uuid.UUID)(nil))
 		} else {
-			c.Set("userID", claims.UserID)
+			c.Set("userID", &claims.UserID)
 		}
 
 		c.Next()
@@ -41,6 +41,6 @@ func handleMissingToken(c *gin.Context, authService *auth.AuthService, logger *z
 
 	c.SetCookie("jwt", token, 24*60*60, "/", "", false, true)
 
-	c.Set("userID", userID)
+	c.Set("userID", &userID)
 	c.Next()
 }
