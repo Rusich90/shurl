@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
-	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
+	"github.com/google/uuid"
 )
 
 type FileURLRepository struct {
@@ -15,7 +15,7 @@ type FileURLRepository struct {
 	mu          sync.Mutex
 }
 
-func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]domainurl.URL, error) {
+func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -48,7 +48,7 @@ func (r *FileURLRepository) Get(ctx context.Context, id string) (string, bool) {
 	return url, ok
 }
 
-func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row dto.URLRow) error {
+func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.URL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -76,7 +76,7 @@ func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row dto.URLRow)
 	return nil
 }
 
-func (r *FileURLRepository) SaveBatch(ctx context.Context, rows []dto.URLRow) error {
+func (r *FileURLRepository) SaveBatch(ctx context.Context, rows []domainurl.URL) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

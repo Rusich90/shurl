@@ -5,6 +5,7 @@ import (
 
 	"github.com/Rusich90/shurl.git/internal/service/auth"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -19,7 +20,7 @@ func AuthMiddleware(authService *auth.AuthService, logger *zap.Logger) gin.Handl
 
 		claims, err := authService.ValidateToken(tokenCookie)
 		if err != nil {
-			c.Set("userID", "")
+			c.Set("userID", (*uuid.UUID)(nil))
 		} else {
 			c.Set("userID", claims.UserID)
 		}
@@ -29,12 +30,7 @@ func AuthMiddleware(authService *auth.AuthService, logger *zap.Logger) gin.Handl
 }
 
 func handleMissingToken(c *gin.Context, authService *auth.AuthService, logger *zap.Logger) {
-	userID, err := authService.GenerateUserID()
-	if err != nil {
-		logger.Error("Failed to generate user ID", zap.Error(err))
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
-	}
+	userID := authService.GenerateUserID()
 
 	token, err := authService.GenerateToken(userID)
 	if err != nil {

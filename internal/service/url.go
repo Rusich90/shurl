@@ -10,6 +10,7 @@ import (
 	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/idgen"
 	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
+	"github.com/google/uuid"
 )
 
 type URLService struct {
@@ -29,14 +30,14 @@ type CreateShortURLResult struct {
 	IsNew bool
 }
 
-func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, userID string) (*CreateShortURLResult, error) {
+func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, userID *uuid.UUID) (*CreateShortURLResult, error) {
 	for {
 		id, err := idgen.GenerateID()
 		if err != nil {
 			return nil, err
 		}
 
-		row := dto.URLRow{ShortURL: id, OriginalURL: originalURL, UserID: userID}
+		row := domainurl.URL{ShortURL: id, OriginalURL: originalURL, UserID: userID}
 
 		err = s.repo.SaveIfNotExists(ctx, row)
 		if err != nil {
@@ -69,8 +70,8 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, use
 	}
 }
 
-func (s *URLService) CreateShortBatchURL(ctx context.Context, request dto.CreateBatchURLRequest, userID string) (dto.CreateBatchURLResponse, error) {
-	var urlRows []dto.URLRow
+func (s *URLService) CreateShortBatchURL(ctx context.Context, request dto.CreateBatchURLRequest, userID *uuid.UUID) (dto.CreateBatchURLResponse, error) {
+	var urlRows []domainurl.URL
 	var responses dto.CreateBatchURLResponse
 
 	for _, req := range request {
@@ -95,7 +96,7 @@ func (s *URLService) CreateShortBatchURL(ctx context.Context, request dto.Create
 			return nil, fmt.Errorf("failed to generate unique ID after %d attempts", maxAttempts)
 		}
 
-		row := dto.URLRow{
+		row := domainurl.URL{
 			ShortURL:    id,
 			OriginalURL: req.OriginalURL,
 			UserID:      userID,
@@ -125,6 +126,6 @@ func (s *URLService) GetOriginalURL(ctx context.Context, id string) (string, boo
 	return s.repo.Get(ctx, id)
 }
 
-func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID string) ([]domainurl.URL, error) {
+func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
 	return s.repo.GetAllByUserID(ctx, userID)
 }

@@ -1,13 +1,15 @@
 package ctx
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+)
 
-func GetUserID(c *gin.Context) (string, bool) {
+func GetUserID(c *gin.Context) (*uuid.UUID, bool) {
 	v, ok := c.Get("userID")
-	if !ok {
-		return "", false
+	if !ok || v == nil {
+		return nil, false
 	}
-
-	userID, ok := v.(string)
-	return userID, ok
+	uid, ok := v.(*uuid.UUID)
+	return uid, ok
 }

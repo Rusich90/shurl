@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
+	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
 )
 
 type FileStorage struct {
@@ -25,7 +25,7 @@ func NewFileStorage(fileName string) (*FileStorage, error) {
 	}, nil
 }
 
-func (f *FileStorage) SaveRow(row dto.URLRow) error {
+func (f *FileStorage) SaveRow(row domainurl.URL) error {
 	file, err := os.OpenFile(f.fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		return fmt.Errorf("failed os.OpenFile: %w", err)
@@ -44,21 +44,21 @@ func (f *FileStorage) SaveRow(row dto.URLRow) error {
 	return nil
 }
 
-func (f *FileStorage) GetURLs() ([]dto.URLRow, error) {
+func (f *FileStorage) GetURLs() ([]domainurl.URL, error) {
 	file, err := os.Open(f.fileName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []dto.URLRow{}, nil
+			return []domainurl.URL{}, nil
 		}
 		return nil, fmt.Errorf("failed os.Open: %w", err)
 	}
 	defer file.Close()
 
-	var urls []dto.URLRow
+	var urls []domainurl.URL
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-		var row dto.URLRow
+		var row domainurl.URL
 		line := scanner.Text()
 		if line != "" {
 			if err := json.Unmarshal([]byte(line), &row); err != nil {

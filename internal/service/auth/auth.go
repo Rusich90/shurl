@@ -9,7 +9,7 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
+	UserID uuid.UUID `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
@@ -23,7 +23,7 @@ func NewAuthService(secret string) *AuthService {
 	}
 }
 
-func (s *AuthService) GenerateToken(userID string) (string, error) {
+func (s *AuthService) GenerateToken(userID uuid.UUID) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -58,10 +58,6 @@ func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-func (s *AuthService) GenerateUserID() (string, error) {
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return "", fmt.Errorf("failed to generate UUID: %w", err)
-	}
-	return id.String(), nil
+func (s *AuthService) GenerateUserID() uuid.UUID {
+	return uuid.New()
 }

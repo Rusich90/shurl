@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
-	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
+	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -36,7 +36,7 @@ func (r *DBURLRepository) Get(ctx context.Context, id string) (string, bool) {
 	return originalURL, true
 }
 
-func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]domainurl.URL, error) {
+func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
 	query := `
 		SELECT short_url, original_url
 		FROM urls 
@@ -66,7 +66,7 @@ func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID string) ([]
 	return urls, nil
 }
 
-func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row dto.URLRow) error {
+func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.URL) error {
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM urls WHERE short_url = $1)`
 	err := r.db.QueryRowContext(ctx, checkQuery, row.ShortURL).Scan(&exists)
@@ -90,7 +90,7 @@ func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row dto.URLRow) e
 	return nil
 }
 
-func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []dto.URLRow) error {
+func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []domainurl.URL) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)

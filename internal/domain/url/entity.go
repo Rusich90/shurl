@@ -5,5 +5,5 @@ import "github.com/google/uuid"
 type URL struct {
 	ShortURL    string
 	OriginalURL string
-	UserID      uuid.UUID
+	UserID      *uuid.UUID
 }
