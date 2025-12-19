@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
+	neturl "net/url"
 	"strings"
+	"time"
 
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/service"
@@ -90,7 +92,12 @@ func (h *Handler) GetOriginalURL(c *gin.Context) {
 		return
 	}
 
-	c.Redirect(http.StatusTemporaryRedirect, url)
+	if url.IsDeleted {
+		c.Status(http.StatusGone)
+		return
+	}
+
+	c.Redirect(http.StatusTemporaryRedirect, url.OriginalURL)
 }
 
 func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
@@ -107,7 +114,8 @@ func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 
 	urls, err := h.urlService.GetUserOriginalURLs(c.Request.Context(), userID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "URL not found"})
+		h.logger.Error("Failed to get user original URLs: %v", zap.Error(err))
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "unknown error"})
 		return
 	}
 
@@ -118,7 +126,7 @@ func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 
 	var response dto.UserURLsResponse
 	for _, domainURL := range urls {
-		shortURL, _ := url.JoinPath(h.cfg.BaseURL, domainURL.ShortURL) // TODO: Переделать и вынести сборку в сервис
+		shortURL, _ := neturl.JoinPath(h.cfg.BaseURL, domainURL.ShortURL) // TODO: Переделать и вынести сборку в сервис
 		response = append(response, dto.URLResponse{
 			ShortURL:    shortURL,
 			OriginalURL: domainURL.OriginalURL,
@@ -134,6 +142,45 @@ func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 
 	c.Data(http.StatusOK, "application/json", respBytes)
 
+}
+
+func (h *Handler) DeleteURLsByUserID(c *gin.Context) {
+	if c.Request.Method != http.MethodDelete {
+		c.AbortWithStatus(http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, _ := ctx.GetUserID(c)
+	if userID == nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+	defer c.Request.Body.Close()
+
+	var req dto.DeleteURLsRequest
+	if err := easyjson.Unmarshal(body, &req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
+		return
+	}
+
+	if err := validators.ValidateDeleteURLsRequest(req); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c, 1*time.Minute)
+	go func() {
+		defer cancel()
+		h.urlService.DeleteURLsByUserID(ctx, req, userID)
+	}()
+
+	c.Status(http.StatusAccepted)
 }
 
 func (h *Handler) JSONCreateShortURL(c *gin.Context) {

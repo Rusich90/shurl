@@ -45,3 +45,6 @@ type URLResponse struct {
 
 //easyjson:json
 type UserURLsResponse []URLResponse
+
+//easyjson:json
+type DeleteURLsRequest []string

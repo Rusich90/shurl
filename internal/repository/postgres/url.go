@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq"
 )
 
 type DBURLRepository struct {
@@ -22,23 +23,20 @@ func NewDBURLRepository(db *sql.DB) *DBURLRepository {
 	}
 }
 
-func (r *DBURLRepository) Get(ctx context.Context, id string) (string, bool) {
-	var originalURL string
-	query := `SELECT original_url FROM urls WHERE short_url = $1`
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&originalURL)
+func (r *DBURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bool) {
+	var url domainurl.URL
+	query := `SELECT short_url, original_url, user_id, is_deleted FROM urls WHERE short_url = $1`
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&url.ShortURL, &url.OriginalURL, &url.UserID, &url.IsDeleted)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", false
-		}
-		return "", false
+		return domainurl.URL{}, false
 	}
 
-	return originalURL, true
+	return url, true
 }
 
 func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
 	query := `
-		SELECT short_url, original_url
+		SELECT short_url, original_url, user_id, is_deleted
 		FROM urls 
 		WHERE user_id = $1 
 		ORDER BY created_at DESC
@@ -53,7 +51,7 @@ func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID)
 
 	for rows.Next() {
 		var u domainurl.URL
-		if err := rows.Scan(&u.ShortURL, &u.OriginalURL); err != nil {
+		if err := rows.Scan(&u.ShortURL, &u.OriginalURL, &u.UserID, &u.IsDeleted); err != nil {
 			return nil, err
 		}
 		urls = append(urls, u)
@@ -87,6 +85,20 @@ func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.URL
 		}
 		return err
 	}
+	return nil
+}
+
+func (r *DBURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
+	query := `
+		UPDATE urls 
+		SET is_deleted = true
+		WHERE short_url = ANY($1) AND user_id = $2
+	`
+	_, err := r.db.ExecContext(ctx, query, pq.Array(IDs), userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete URLs: %w", err)
+	}
+
 	return nil
 }
 

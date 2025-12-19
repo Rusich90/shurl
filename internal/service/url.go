@@ -122,10 +122,22 @@ func (s *URLService) CreateShortBatchURL(ctx context.Context, request dto.Create
 	return responses, nil
 }
 
-func (s *URLService) GetOriginalURL(ctx context.Context, id string) (string, bool) {
+func (s *URLService) GetOriginalURL(ctx context.Context, id string) (domainurl.URL, bool) {
 	return s.repo.Get(ctx, id)
 }
 
 func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
-	return s.repo.GetAllByUserID(ctx, userID)
+	urls, err := s.repo.GetAllByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("GetUserOriginalURLs.repo.GetAllByUserID: %w", err)
+	}
+
+	return urls, nil
+}
+
+func (s *URLService) DeleteURLsByUserID(ctx context.Context, IDs []string, userID *uuid.UUID) {
+	err := s.repo.DeleteURLs(ctx, IDs, userID)
+	if err != nil {
+		log.Printf("failed to delete URLs: %v", err)
+	}
 }

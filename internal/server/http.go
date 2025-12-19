@@ -87,6 +87,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) 
 		api.POST("/shorten", urlHandler.JSONCreateShortURL)
 		api.POST("/shorten/batch", urlHandler.CreateShortBatchURL)
 		api.GET("/user/urls", urlHandler.GetUserOriginalURLs)
+		api.DELETE("/user/urls", urlHandler.DeleteURLsByUserID)
 	}
 
 	return r, urlRepo, nil

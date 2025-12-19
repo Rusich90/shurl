@@ -25,8 +25,13 @@ func (m *MockURLRepository) GetUserURLs(ctx context.Context, userID *uuid.UUID) 
 	panic("implement me")
 }
 
-func (m *MockURLRepository) Get(ctx context.Context, id string) (string, bool) {
-	return "", false
+func (m *MockURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *MockURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bool) {
+	return domainurl.URL{}, false
 }
 
 func (m *MockURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {

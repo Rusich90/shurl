@@ -10,9 +10,14 @@ import (
 )
 
 type FileURLRepository struct {
-	urls        map[string]string
+	urls        map[string]domainurl.URL
 	fileStorage FileStorage
 	mu          sync.Mutex
+}
+
+func (r *FileURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
@@ -22,7 +27,7 @@ func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUI
 
 func NewFileURLRepository(fileStorage FileStorage) (*FileURLRepository, error) {
 	repo := &FileURLRepository{
-		urls:        make(map[string]string),
+		urls:        make(map[string]domainurl.URL),
 		fileStorage: fileStorage,
 	}
 
@@ -34,13 +39,13 @@ func NewFileURLRepository(fileStorage FileStorage) (*FileURLRepository, error) {
 	return repo, nil
 }
 
-func (r *FileURLRepository) Get(ctx context.Context, id string) (string, bool) {
+func (r *FileURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	select {
 	case <-ctx.Done():
-		return "", false
+		return domainurl.URL{}, false
 	default:
 	}
 
@@ -62,13 +67,13 @@ func (r *FileURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.U
 		return domainurl.ErrShortURLConflict
 	}
 
-	for _, originalURL := range r.urls {
-		if originalURL == row.OriginalURL {
+	for _, url := range r.urls {
+		if url.OriginalURL == row.OriginalURL {
 			return domainurl.ErrOriginalURLConflict
 		}
 	}
 
-	r.urls[row.ShortURL] = row.OriginalURL
+	r.urls[row.ShortURL] = row
 	err := r.fileStorage.SaveRow(row)
 	if err != nil {
 		return err
@@ -103,7 +108,7 @@ func (r *FileURLRepository) SaveBatch(ctx context.Context, rows []domainurl.URL)
 		if err != nil {
 			return fmt.Errorf("failed to save row %s: %w", row.ShortURL, err)
 		}
-		r.urls[row.ShortURL] = row.OriginalURL
+		r.urls[row.ShortURL] = row
 	}
 
 	return nil
@@ -116,7 +121,7 @@ func (r *FileURLRepository) loadFromStorage() error {
 	}
 
 	for _, url := range urls {
-		r.urls[url.ShortURL] = url.OriginalURL
+		r.urls[url.ShortURL] = url
 	}
 
 	return nil
@@ -133,7 +138,7 @@ func (r *FileURLRepository) GetByOriginalURL(ctx context.Context, originalURL st
 	}
 
 	for shortURL, url := range r.urls {
-		if url == originalURL {
+		if url.OriginalURL == originalURL {
 			return shortURL, true
 		}
 	}
