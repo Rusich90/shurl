@@ -177,7 +177,9 @@ func (h *Handler) DeleteURLsByUserID(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c, 1*time.Minute)
 	go func() {
 		defer cancel()
-		h.urlService.DeleteURLsByUserID(ctx, req, userID)
+		if err := h.urlService.DeleteURLsByUserID(ctx, req, userID); err != nil {
+			h.logger.Error("Failed to delete URLs", zap.Error(err))
+		}
 	}()
 
 	c.Status(http.StatusAccepted)

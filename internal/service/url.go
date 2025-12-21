@@ -5,23 +5,28 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"time"
 
+	"github.com/Rusich90/shurl.git/internal/batch"
 	"github.com/Rusich90/shurl.git/internal/config"
 	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/idgen"
 	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type URLService struct {
-	repo domainurl.URLRepository
-	cfg  *config.Config
+	repo   domainurl.URLRepository
+	cfg    *config.Config
+	logger *zap.Logger
 }
 
-func NewURLService(repo domainurl.URLRepository, cfg *config.Config) *URLService {
+func NewURLService(repo domainurl.URLRepository, cfg *config.Config, logger *zap.Logger) *URLService {
 	return &URLService{
-		repo: repo,
-		cfg:  cfg,
+		repo:   repo,
+		cfg:    cfg,
+		logger: logger,
 	}
 }
 
@@ -135,9 +140,34 @@ func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID *uuid.UUID)
 	return urls, nil
 }
 
-func (s *URLService) DeleteURLsByUserID(ctx context.Context, IDs []string, userID *uuid.UUID) {
-	err := s.repo.DeleteURLs(ctx, IDs, userID)
-	if err != nil {
-		log.Printf("failed to delete URLs: %v", err)
+func (s *URLService) DeleteURLsByUserID(ctx context.Context, IDs []string, userID *uuid.UUID) error {
+	start := time.Now()
+
+	s.logger.Info("Starting DeleteURLsByUserID",
+		zap.Int("url_count", len(IDs)),
+		zap.Any("user_id", userID),
+	)
+
+	processor := batch.NewBatchProcessor(10, 50000, s.logger)
+
+	processFunc := func(ctx context.Context, items []string, uid *uuid.UUID) error {
+		return s.repo.DeleteURLs(ctx, items, uid)
 	}
+
+	stats, err := processor.ProcessBatch(ctx, IDs, userID, processFunc)
+	if err != nil {
+		return fmt.Errorf("failed to process batch: %w", err)
+	}
+
+	duration := time.Since(start)
+	s.logger.Info("DeleteURLsByUserID completed",
+		zap.Duration("duration", duration),
+		zap.Int64("successful_deletes", stats.SuccessfulDeletes),
+		zap.Int64("failed_deletes", stats.FailedDeletes),
+		zap.Int64("total_processed", stats.SuccessfulDeletes+stats.FailedDeletes),
+		zap.Int64("processed_chunks", stats.ProcessedChunks),
+		zap.Int("url_count", len(IDs)),
+	)
+
+	return nil
 }

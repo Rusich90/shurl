@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"math/big"
-
 )
 
 const (

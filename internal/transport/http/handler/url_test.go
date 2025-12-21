@@ -45,7 +45,7 @@ func TestCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create file repository: %v", err)
 	}
 
-	urlService := service.NewURLService(fileRepo, cfg)
+	urlService := service.NewURLService(fileRepo, cfg, logger)
 	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
@@ -176,7 +176,7 @@ func TestJsonCreateShortURL(t *testing.T) {
 		t.Fatalf("Failed to create file repository: %v", err)
 	}
 
-	urlService := service.NewURLService(fileRepo, cfg)
+	urlService := service.NewURLService(fileRepo, cfg, logger)
 	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
@@ -376,7 +376,7 @@ func TestGetOriginalURL(t *testing.T) {
 		t.Fatalf("Failed to create file repository: %v", err)
 	}
 
-	urlService := service.NewURLService(fileRepo, cfg)
+	urlService := service.NewURLService(fileRepo, cfg, logger)
 	handler := NewHandler(urlService, cfg, logger)
 
 	w1 := httptest.NewRecorder()

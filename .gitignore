@@ -25,3 +25,5 @@ vendor/
 file_storage.jsonl
 
 .env
+
+cmd/bulk_insert

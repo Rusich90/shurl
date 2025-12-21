@@ -66,7 +66,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) 
 
 	authService := auth.NewAuthService(cfg.AuthSecret)
 
-	urlService := service.NewURLService(urlRepo, cfg)
+	urlService := service.NewURLService(urlRepo, cfg, log)
 	healthService := service.NewHealthService(urlRepo)
 
 	urlHandler := handler.NewHandler(urlService, cfg, log)
