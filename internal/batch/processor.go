@@ -17,12 +17,20 @@ type BatchProcessor struct {
 	logger     *zap.Logger
 }
 
-func NewBatchProcessor(numWorkers, chunkSize int, logger *zap.Logger) *BatchProcessor {
+func NewBatchProcessor(numWorkers, chunkSize int, logger *zap.Logger) (*BatchProcessor, error) {
+	if numWorkers <= 0 {
+		return nil, fmt.Errorf("numWorkers must be positive, got %d", numWorkers)
+	}
+
+	if chunkSize <= 0 {
+		return nil, fmt.Errorf("chunkSize must be positive, got %d", chunkSize)
+	}
+
 	return &BatchProcessor{
 		numWorkers: numWorkers,
 		chunkSize:  chunkSize,
 		logger:     logger,
-	}
+	}, nil
 }
 
 func (bp *BatchProcessor) ProcessBatch(ctx context.Context, items []string, userID *uuid.UUID, processFunc ProcessFunc) (*ProcessingStats, error) {
@@ -32,7 +40,7 @@ func (bp *BatchProcessor) ProcessBatch(ctx context.Context, items []string, user
 
 	stats := &ProcessingStats{}
 
-	chunksChan := GenerateChunks(items, bp.chunkSize)
+	chunksChan := bp.generateChunks(items, bp.chunkSize)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -66,4 +74,23 @@ func (bp *BatchProcessor) ProcessBatch(ctx context.Context, items []string, user
 	}
 
 	return stats, nil
+}
+
+func (bp *BatchProcessor) generateChunks(items []string, chunkSize int) <-chan []string {
+	inputCh := make(chan []string)
+
+	go func() {
+		defer close(inputCh)
+
+		for i := 0; i < len(items); i += chunkSize {
+			end := i + chunkSize
+			if end > len(items) {
+				end = len(items)
+			}
+			chunk := items[i:end]
+			inputCh <- chunk
+		}
+	}()
+
+	return inputCh
 }

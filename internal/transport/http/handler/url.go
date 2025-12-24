@@ -11,7 +11,7 @@ import (
 
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/service"
-	"github.com/Rusich90/shurl.git/internal/transport/http/ctx"
+	"github.com/Rusich90/shurl.git/internal/transport/http/authcontext"
 	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
 	"github.com/Rusich90/shurl.git/internal/transport/http/validator"
 	"github.com/gin-gonic/gin"
@@ -57,7 +57,11 @@ func (h *Handler) CreateShortURL(c *gin.Context) {
 		return
 	}
 
-	userID, _ := ctx.GetUserID(c)
+	userID, err := authcontext.GetUserID(c)
+	if err != nil {
+		h.logger.Info("Failed to get user ID: ", zap.Error(err))
+	}
+
 	result, err := h.urlService.CreateShortURL(c.Request.Context(), originalURL, userID)
 	if err != nil {
 		log.Printf("Failed to create short URL: %v", err)
@@ -106,7 +110,11 @@ func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 		return
 	}
 
-	userID, _ := ctx.GetUserID(c)
+	userID, err := authcontext.GetUserID(c)
+	if err != nil {
+		h.logger.Info("Failed to get user ID: ", zap.Error(err))
+	}
+
 	if userID == nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -150,8 +158,8 @@ func (h *Handler) DeleteURLsByUserID(c *gin.Context) {
 		return
 	}
 
-	userID, _ := ctx.GetUserID(c)
-	if userID == nil {
+	userID, err := authcontext.GetUserID(c)
+	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
@@ -209,7 +217,11 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 		return
 	}
 
-	userID, _ := ctx.GetUserID(c)
+	userID, err := authcontext.GetUserID(c)
+	if err != nil {
+		h.logger.Info("Failed to get user ID: ", zap.Error(err))
+	}
+
 	result, err := h.urlService.CreateShortURL(c.Request.Context(), req.URL, userID)
 	if err != nil {
 		h.logger.Error("Failed to create short URL: %v", zap.Error(err))
@@ -261,7 +273,11 @@ func (h *Handler) CreateShortBatchURL(c *gin.Context) {
 		}
 	}
 
-	userID, _ := ctx.GetUserID(c)
+	userID, err := authcontext.GetUserID(c)
+	if err != nil {
+		h.logger.Info("Failed to get user ID: ", zap.Error(err))
+	}
+
 	results, err := h.urlService.CreateShortBatchURL(c.Request.Context(), req, userID)
 	if err != nil {
 		h.logger.Error("Failed to create batch short URLs", zap.Error(err))

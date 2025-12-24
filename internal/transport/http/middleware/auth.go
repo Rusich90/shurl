@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/Rusich90/shurl.git/internal/service/auth"
+	"github.com/Rusich90/shurl.git/internal/transport/http/authcontext"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -14,15 +14,16 @@ func AuthMiddleware(authService *auth.AuthService, logger *zap.Logger) gin.Handl
 		tokenCookie, err := c.Cookie("jwt")
 
 		if err != nil {
+			authcontext.SetUserID(c, nil)
 			handleMissingToken(c, authService, logger)
 			return
 		}
 
 		claims, err := authService.ValidateToken(tokenCookie)
 		if err != nil {
-			c.Set("userID", (*uuid.UUID)(nil))
+			authcontext.SetUserID(c, nil)
 		} else {
-			c.Set("userID", &claims.UserID)
+			authcontext.SetUserID(c, &claims.UserID)
 		}
 
 		c.Next()
@@ -41,6 +42,6 @@ func handleMissingToken(c *gin.Context, authService *auth.AuthService, logger *z
 
 	c.SetCookie("jwt", token, 24*60*60, "/", "", false, true)
 
-	c.Set("userID", &userID)
+	authcontext.SetUserID(c, &userID)
 	c.Next()
 }

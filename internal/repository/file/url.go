@@ -2,6 +2,7 @@ package file
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -16,13 +17,11 @@ type FileURLRepository struct {
 }
 
 func (r *FileURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
-	//TODO implement me
-	panic("implement me")
+	return errors.New("not yet implemented")
 }
 
 func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
-	//TODO implement me
-	panic("implement me")
+	return nil, errors.New("not yet implemented")
 }
 
 func NewFileURLRepository(fileStorage FileStorage) (*FileURLRepository, error) {

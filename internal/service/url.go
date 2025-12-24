@@ -148,7 +148,10 @@ func (s *URLService) DeleteURLsByUserID(ctx context.Context, IDs []string, userI
 		zap.Any("user_id", userID),
 	)
 
-	processor := batch.NewBatchProcessor(10, 50000, s.logger)
+	processor, err := batch.NewBatchProcessor(10, 50000, s.logger)
+	if err != nil {
+		return fmt.Errorf("batch.NewBatchProcessor: %w", err)
+	}
 
 	processFunc := func(ctx context.Context, items []string, uid *uuid.UUID) error {
 		return s.repo.DeleteURLs(ctx, items, uid)

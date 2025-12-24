@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -21,13 +22,11 @@ type MockURLRepository struct {
 }
 
 func (m *MockURLRepository) GetUserURLs(ctx context.Context, userID *uuid.UUID) (string, bool) {
-	//TODO implement me
-	panic("implement me")
+	return "", false
 }
 
 func (m *MockURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
-	//TODO implement me
-	panic("implement me")
+	return errors.New("not yet implemented")
 }
 
 func (m *MockURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bool) {
