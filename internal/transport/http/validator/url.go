@@ -24,6 +24,21 @@ func ValidateCreateURLRequest(urlField string) error {
 	return nil
 }
 
+func ValidateDeleteURLsRequest(ids []string) error {
+	if len(ids) == 0 {
+		return fmt.Errorf("at least one id is required")
+	}
+
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			return fmt.Errorf("id cannot be empty")
+		}
+	}
+
+	return nil
+}
+
 func ValidateCreateBatchURLRequest(correlationID, urlField string) error {
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {

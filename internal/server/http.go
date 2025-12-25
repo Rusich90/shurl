@@ -7,11 +7,13 @@ import (
 	"time"
 
 	"github.com/Rusich90/shurl.git/internal/config"
-	"github.com/Rusich90/shurl.git/internal/handler"
-	"github.com/Rusich90/shurl.git/internal/middleware"
-	"github.com/Rusich90/shurl.git/internal/repository"
+	"github.com/Rusich90/shurl.git/internal/domain/url"
+	"github.com/Rusich90/shurl.git/internal/repository/file"
+	postgresrepo "github.com/Rusich90/shurl.git/internal/repository/postgres"
 	"github.com/Rusich90/shurl.git/internal/service"
-	"github.com/Rusich90/shurl.git/internal/storage"
+	"github.com/Rusich90/shurl.git/internal/service/auth"
+	"github.com/Rusich90/shurl.git/internal/transport/http/handler"
+	"github.com/Rusich90/shurl.git/internal/transport/http/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -20,9 +22,9 @@ import (
 	"go.uber.org/zap"
 )
 
-func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, error) {
+func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) {
 	var db *sql.DB
-	var urlRepo repository.URLRepository
+	var urlRepo domain.URLRepository
 
 	if cfg.DatabaseDSN != "" {
 		var err error
@@ -42,14 +44,14 @@ func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, err
 			return nil, nil, fmt.Errorf("failed to run migrations: %w", err)
 		}
 
-		urlRepo = repository.NewDBURLRepository(db)
+		urlRepo = postgresrepo.NewDBURLRepository(db)
 	} else {
-		fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+		fileStorage, err := file.NewFileStorage(cfg.FileStoragePath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialize file storage: %w", err)
 		}
 
-		fileRepo, err := repository.NewFileURLRepository(*fileStorage)
+		fileRepo, err := file.NewFileURLRepository(*fileStorage)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialize file repository: %w", err)
 		}
@@ -62,7 +64,9 @@ func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, err
 	}
 	defer log.Sync()
 
-	urlService := service.NewURLService(urlRepo, cfg)
+	authService := auth.NewAuthService(cfg.AuthSecret)
+
+	urlService := service.NewURLService(urlRepo, cfg, log)
 	healthService := service.NewHealthService(urlRepo)
 
 	urlHandler := handler.NewHandler(urlService, cfg, log)
@@ -71,6 +75,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, err
 	r := gin.New()
 	r.Use(middleware.LoggerMiddleware(log))
 	r.Use(middleware.GzipMiddleware())
+	r.Use(middleware.AuthMiddleware(authService, log))
 
 	r.GET("/ping", healthHandler.Ping)
 
@@ -81,6 +86,8 @@ func SetupServer(cfg *config.Config) (*gin.Engine, repository.URLRepository, err
 	{
 		api.POST("/shorten", urlHandler.JSONCreateShortURL)
 		api.POST("/shorten/batch", urlHandler.CreateShortBatchURL)
+		api.GET("/user/urls", urlHandler.GetUserOriginalURLs)
+		api.DELETE("/user/urls", urlHandler.DeleteURLsByUserID)
 	}
 
 	return r, urlRepo, nil

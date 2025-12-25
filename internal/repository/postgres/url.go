@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	"context"
@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 
-	internalErrors "github.com/Rusich90/shurl.git/internal/errors"
-	"github.com/Rusich90/shurl.git/internal/model"
+	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
+	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq"
 )
 
 type DBURLRepository struct {
@@ -22,21 +23,48 @@ func NewDBURLRepository(db *sql.DB) *DBURLRepository {
 	}
 }
 
-func (r *DBURLRepository) Get(ctx context.Context, id string) (string, bool) {
-	var originalURL string
-	query := `SELECT original_url FROM urls WHERE short_url = $1`
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&originalURL)
+func (r *DBURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bool) {
+	var url domainurl.URL
+	query := `SELECT short_url, original_url, user_id, is_deleted FROM urls WHERE short_url = $1`
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&url.ShortURL, &url.OriginalURL, &url.UserID, &url.IsDeleted)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", false
-		}
-		return "", false
+		return domainurl.URL{}, false
 	}
 
-	return originalURL, true
+	return url, true
 }
 
-func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {
+func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
+	query := `
+		SELECT short_url, original_url, user_id, is_deleted
+		FROM urls 
+		WHERE user_id = $1 
+		ORDER BY created_at DESC
+	`
+	rows, err := r.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	urls := make([]domainurl.URL, 0)
+
+	for rows.Next() {
+		var u domainurl.URL
+		if err := rows.Scan(&u.ShortURL, &u.OriginalURL, &u.UserID, &u.IsDeleted); err != nil {
+			return nil, err
+		}
+		urls = append(urls, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return urls, nil
+}
+
+func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.URL) error {
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM urls WHERE short_url = $1)`
 	err := r.db.QueryRowContext(ctx, checkQuery, row.ShortURL).Scan(&exists)
@@ -45,22 +73,36 @@ func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow)
 	}
 
 	if exists {
-		return internalErrors.ErrShortURLConflict
+		return domainurl.ErrShortURLConflict
 	}
 
-	insertQuery := `INSERT INTO urls (short_url, original_url) VALUES ($1, $2)`
-	_, err = r.db.ExecContext(ctx, insertQuery, row.ShortURL, row.OriginalURL)
+	insertQuery := `INSERT INTO urls (short_url, original_url, user_id) VALUES ($1, $2, $3)`
+	_, err = r.db.ExecContext(ctx, insertQuery, row.ShortURL, row.OriginalURL, row.UserID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return internalErrors.ErrOriginalURLConflict
+			return domainurl.ErrOriginalURLConflict
 		}
 		return err
 	}
 	return nil
 }
 
-func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
+func (r *DBURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
+	query := `
+		UPDATE urls 
+		SET is_deleted = true
+		WHERE short_url = ANY($1) AND user_id = $2
+	`
+	_, err := r.db.ExecContext(ctx, query, pq.Array(IDs), userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete URLs: %w", err)
+	}
+
+	return nil
+}
+
+func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []domainurl.URL) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -73,7 +115,7 @@ func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) er
 	}
 	defer checkStmt.Close()
 
-	insertStmt, err := tx.PrepareContext(ctx, `INSERT INTO urls (short_url, original_url) VALUES ($1, $2)`)
+	insertStmt, err := tx.PrepareContext(ctx, `INSERT INTO urls (short_url, original_url, user_id) VALUES ($1, $2, $3)`)
 	if err != nil {
 		return fmt.Errorf("failed to prepare insert statement: %w", err)
 	}
@@ -90,7 +132,7 @@ func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) er
 			return fmt.Errorf("conflict: short URL %s already exists", row.ShortURL)
 		}
 
-		_, err = insertStmt.ExecContext(ctx, row.ShortURL, row.OriginalURL)
+		_, err = insertStmt.ExecContext(ctx, row.ShortURL, row.OriginalURL, row.UserID)
 		if err != nil {
 			return fmt.Errorf("failed to insert row %s: %w", row.ShortURL, err)
 		}

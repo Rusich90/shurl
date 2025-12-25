@@ -10,9 +10,8 @@ import (
 	"testing"
 
 	"github.com/Rusich90/shurl.git/internal/config"
-	"github.com/Rusich90/shurl.git/internal/repository"
+	"github.com/Rusich90/shurl.git/internal/repository/file"
 	"github.com/Rusich90/shurl.git/internal/service"
-	"github.com/Rusich90/shurl.git/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -36,17 +35,17 @@ func TestCreateShortURL(t *testing.T) {
 
 	logger := zap.NewNop()
 
-	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+	fileStorage, err := file.NewFileStorage(cfg.FileStoragePath)
 	if err != nil {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
+	fileRepo, err := file.NewFileURLRepository(*fileStorage)
 	if err != nil {
 		t.Fatalf("Failed to create file repository: %v", err)
 	}
 
-	urlService := service.NewURLService(fileRepo, cfg)
+	urlService := service.NewURLService(fileRepo, cfg, logger)
 	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
@@ -167,17 +166,17 @@ func TestJsonCreateShortURL(t *testing.T) {
 
 	logger := zap.NewNop()
 
-	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+	fileStorage, err := file.NewFileStorage(cfg.FileStoragePath)
 	if err != nil {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
+	fileRepo, err := file.NewFileURLRepository(*fileStorage)
 	if err != nil {
 		t.Fatalf("Failed to create file repository: %v", err)
 	}
 
-	urlService := service.NewURLService(fileRepo, cfg)
+	urlService := service.NewURLService(fileRepo, cfg, logger)
 	handler := NewHandler(urlService, cfg, logger)
 
 	gin.SetMode(gin.TestMode)
@@ -367,17 +366,17 @@ func TestGetOriginalURL(t *testing.T) {
 
 	logger := zap.NewNop()
 
-	fileStorage, err := storage.NewFileStorage(cfg.FileStoragePath)
+	fileStorage, err := file.NewFileStorage(cfg.FileStoragePath)
 	if err != nil {
 		t.Fatalf("Failed to create file storage: %v", err)
 	}
 
-	fileRepo, err := repository.NewFileURLRepository(*fileStorage)
+	fileRepo, err := file.NewFileURLRepository(*fileStorage)
 	if err != nil {
 		t.Fatalf("Failed to create file repository: %v", err)
 	}
 
-	urlService := service.NewURLService(fileRepo, cfg)
+	urlService := service.NewURLService(fileRepo, cfg, logger)
 	handler := NewHandler(urlService, cfg, logger)
 
 	w1 := httptest.NewRecorder()

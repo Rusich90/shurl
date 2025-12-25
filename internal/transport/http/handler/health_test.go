@@ -1,17 +1,18 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"context"
-
-	"github.com/Rusich90/shurl.git/internal/model"
+	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -20,15 +21,27 @@ type MockURLRepository struct {
 	pingError error
 }
 
-func (m *MockURLRepository) Get(ctx context.Context, id string) (string, bool) {
+func (m *MockURLRepository) GetUserURLs(ctx context.Context, userID *uuid.UUID) (string, bool) {
 	return "", false
 }
 
-func (m *MockURLRepository) SaveIfNotExists(ctx context.Context, row model.URLRow) error {
+func (m *MockURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
+	return errors.New("not yet implemented")
+}
+
+func (m *MockURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bool) {
+	return domainurl.URL{}, false
+}
+
+func (m *MockURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
+	return nil, nil
+}
+
+func (m *MockURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.URL) error {
 	return nil
 }
 
-func (m *MockURLRepository) SaveBatch(ctx context.Context, rows []model.URLRow) error {
+func (m *MockURLRepository) SaveBatch(ctx context.Context, rows []domainurl.URL) error {
 	return nil
 }
 

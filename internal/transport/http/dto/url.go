@@ -1,4 +1,4 @@
-package model
+package dto
 
 type CreateURLRequest struct {
 	URL string `json:"url" binding:"required,url"`
@@ -11,6 +11,7 @@ type CreateURLResponse struct {
 type URLRow struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+	UserID      string `json:"user_id,omitempty"`
 }
 
 type PingResponse struct {
@@ -36,3 +37,14 @@ type BatchURLResponseItem struct {
 
 //easyjson:json
 type CreateBatchURLResponse []BatchURLResponseItem
+
+type URLResponse struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
+//easyjson:json
+type UserURLsResponse []URLResponse
+
+//easyjson:json
+type DeleteURLsRequest []string
