@@ -14,6 +14,8 @@ type Config struct {
 	DatabaseDSN     string
 	MigrationsPath  string
 	AuthSecret      string
+	AuditFile       string
+	AuditURL        string
 }
 
 func InitConfig() *Config {
@@ -27,6 +29,8 @@ func InitConfig() *Config {
 	flag.StringVar(&config.DatabaseDSN, "d", "", "Database DSN (if not set, file storage will be used)")
 	flag.StringVar(&config.MigrationsPath, "m", "file://migrations", "Path to migrations")
 	flag.StringVar(&config.AuthSecret, "s", "default_secret_key", "Secret key for JWT signing")
+	flag.StringVar(&config.AuditFile, "audit-file", "", "Path to audit log file")
+	flag.StringVar(&config.AuditURL, "audit-url", "", "URL for audit log service")
 	flag.Parse()
 
 	if envServAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
@@ -51,6 +55,14 @@ func InitConfig() *Config {
 
 	if envAuthSecret, exists := os.LookupEnv("AUTH_SECRET"); exists {
 		config.AuthSecret = envAuthSecret
+	}
+
+	if envAuditFile, exists := os.LookupEnv("AUDIT_FILE"); exists {
+		config.AuditFile = envAuditFile
+	}
+
+	if envAuditURL, exists := os.LookupEnv("AUDIT_URL"); exists {
+		config.AuditURL = envAuditURL
 	}
 
 	return config

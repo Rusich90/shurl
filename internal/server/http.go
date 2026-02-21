@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Rusich90/shurl.git/internal/audit"
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/repository/file"
@@ -66,7 +67,22 @@ func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) 
 
 	authService := auth.NewAuthService(cfg.AuthSecret)
 
-	urlService := service.NewURLService(urlRepo, cfg, log)
+	auditManager := audit.NewManager(log)
+
+	if cfg.AuditFile != "" {
+		fileObserver, err := audit.NewFileObserver(cfg.AuditFile)
+		if err != nil {
+			return nil, nil, fmt.Errorf("audit.NewFileObserver: %w", err)
+		}
+		auditManager.RegisterObserver(fileObserver)
+	}
+
+	if cfg.AuditURL != "" {
+		httpObserver := audit.NewHTTPObserver(cfg.AuditURL)
+		auditManager.RegisterObserver(httpObserver)
+	}
+
+	urlService := service.NewURLService(urlRepo, cfg, log, auditManager)
 	healthService := service.NewHealthService(urlRepo)
 
 	urlHandler := handler.NewHandler(urlService, cfg, log)

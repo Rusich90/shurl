@@ -27,3 +27,4 @@ file_storage.jsonl
 .env
 
 cmd/bulk_insert
+audit.log

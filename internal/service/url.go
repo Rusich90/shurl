@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/Rusich90/shurl.git/internal/audit"
 	"github.com/Rusich90/shurl.git/internal/batch"
 	"github.com/Rusich90/shurl.git/internal/config"
 	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
@@ -17,16 +18,18 @@ import (
 )
 
 type URLService struct {
-	repo   domainurl.URLRepository
-	cfg    *config.Config
-	logger *zap.Logger
+	repo         domainurl.URLRepository
+	cfg          *config.Config
+	logger       *zap.Logger
+	auditManager *audit.Manager
 }
 
-func NewURLService(repo domainurl.URLRepository, cfg *config.Config, logger *zap.Logger) *URLService {
+func NewURLService(repo domainurl.URLRepository, cfg *config.Config, logger *zap.Logger, auditManager *audit.Manager) *URLService {
 	return &URLService{
-		repo:   repo,
-		cfg:    cfg,
-		logger: logger,
+		repo:         repo,
+		cfg:          cfg,
+		logger:       logger,
+		auditManager: auditManager,
 	}
 }
 
@@ -67,6 +70,9 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, use
 		if err != nil {
 			return nil, fmt.Errorf("failed to create short URL: %w", err)
 		}
+
+		auditEvent := audit.NewAuditEvent(audit.ActionShorten, userID, originalURL)
+		go s.auditManager.NotifyAll(ctx, auditEvent)
 
 		return &CreateShortURLResult{
 			URL:   shortURL,
@@ -128,7 +134,12 @@ func (s *URLService) CreateShortBatchURL(ctx context.Context, request dto.Create
 }
 
 func (s *URLService) GetOriginalURL(ctx context.Context, id string) (domainurl.URL, bool) {
-	return s.repo.Get(ctx, id)
+	URL, err := s.repo.Get(ctx, id)
+
+	auditEvent := audit.NewAuditEvent(audit.ActionShorten, nil, URL.OriginalURL)
+	go s.auditManager.NotifyAll(ctx, auditEvent)
+
+	return URL, err
 }
 
 func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
