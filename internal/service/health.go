@@ -1,3 +1,6 @@
+// Package service предоставляет бизнес-логику приложения.
+//
+// Содержит сервисы для работы с URL, аутентификацией и состоянием сервиса.
 package service
 
 import (
@@ -10,16 +13,21 @@ import (
 	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
 )
 
+// HealthService предоставляет операции для проверки состояния сервиса.
 type HealthService struct {
 	storage domain.URLRepository
 }
 
+// NewHealthService создает новый HealthService с указанным хранилищем.
 func NewHealthService(storage domain.URLRepository) *HealthService {
 	return &HealthService{
 		storage: storage,
 	}
 }
 
+// Ping проверяет доступность хранилища и возвращает статус сервиса.
+//
+// Возвращает PingResponse с информацией о статусе и типе хранилища.
 func (s *HealthService) Ping() dto.PingResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

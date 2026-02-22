@@ -1,3 +1,6 @@
+// Package validators предоставляет функции для валидации входных данных.
+//
+// Используется для проверки корректности URL и списков ID перед обработкой.
 package validators
 
 import (
@@ -6,6 +9,9 @@ import (
 	"strings"
 )
 
+// ValidateCreateURLRequest валидирует URL для создания короткой ссылки.
+//
+// Проверяет, что URL не пустой и использует схему http или https.
 func ValidateCreateURLRequest(urlField string) error {
 	urlField = strings.TrimSpace(urlField)
 	if urlField == "" {
@@ -24,6 +30,9 @@ func ValidateCreateURLRequest(urlField string) error {
 	return nil
 }
 
+// ValidateDeleteURLsRequest валидирует список ID для удаления.
+//
+// Проверяет, что список не пустой и все ID не пустые строки.
 func ValidateDeleteURLsRequest(ids []string) error {
 	if len(ids) == 0 {
 		return fmt.Errorf("at least one id is required")
@@ -39,6 +48,9 @@ func ValidateDeleteURLsRequest(ids []string) error {
 	return nil
 }
 
+// ValidateCreateBatchURLRequest валидирует элемент пакетного запроса.
+//
+// Проверяет, что correlation_id не пустой и URL валиден.
 func ValidateCreateBatchURLRequest(correlationID, urlField string) error {
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {

@@ -1,3 +1,7 @@
+// Package config предоставляет инструменты для управления конфигурацией приложения.
+//
+// Конфигурация может быть задана через флаги командной строки или переменные окружения.
+// Переменные окружения имеют приоритет над флагами.
 package config
 
 import (
@@ -7,17 +11,55 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config содержит параметры конфигурации приложения.
+//
+// Поля могут быть заданы через флаги командной строки или переменные окружения.
+// Приоритет: переменные окружения > флаги командной строки.
 type Config struct {
-	ServerAddress   string
-	BaseURL         string
+	// ServerAddress — адрес HTTP-сервера в формате "host:port".
+	ServerAddress string
+	// BaseURL — базовый URL для генерации коротких ссылок.
+	BaseURL string
+	// FileStoragePath — путь к файлу для хранения URL (используется при отключенной БД).
 	FileStoragePath string
-	DatabaseDSN     string
-	MigrationsPath  string
-	AuthSecret      string
-	AuditFile       string
-	AuditURL        string
+	// DatabaseDSN — DSN для подключения к PostgreSQL (если пуст, используется файловое хранилище).
+	DatabaseDSN string
+	// MigrationsPath — путь к миграциям базы данных.
+	MigrationsPath string
+	// AuthSecret — секретный ключ для подписи JWT-токенов.
+	AuthSecret string
+	// AuditFile — путь к файлу для аудит-логов (если задан, используется FileObserver).
+	AuditFile string
+	// AuditURL — URL для отправки аудит-событий (если задан, используется HTTPObserver).
+	AuditURL string
 }
 
+// InitConfig инициализирует конфигурацию из флагов командной строки и переменных окружения.
+//
+// Поддерживаемые флаги:
+//
+//	-a, --address     Адрес HTTP-сервера (по умолчанию: localhost:8080)
+//	-b, --base-url    Базовый URL для коротких ссылок (по умолчанию: http://localhost:8080)
+//	-f, --file        Путь к файлу хранилища (по умолчанию: file_storage.jsonl)
+//	-d, --database    DSN базы данных (если не задан, используется файловое хранилище)
+//	-m, --migrations  Путь к миграциям (по умолчанию: file://migrations)
+//	-s, --secret      Секретный ключ для JWT (по умолчанию: default_secret_key)
+//	--audit-file      Путь к файлу аудит-логов
+//	--audit-url       URL для аудит-логов
+//
+// Поддерживаемые переменные окружения:
+//
+//	SERVER_ADDRESS, BASE_URL, FILE_STORAGE_PATH, DATABASE_DSN, MIGRATIONS_PATH,
+//	AUTH_SECRET, AUDIT_FILE, AUDIT_URL
+//
+// Пример использования:
+//
+//	cfg := config.InitConfig()
+//	if cfg.DatabaseDSN != "" {
+//	    // Использовать PostgreSQL
+//	} else {
+//	    // Использовать файловое хранилище
+//	}
 func InitConfig() *Config {
 	_ = godotenv.Load()
 

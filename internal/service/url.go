@@ -1,3 +1,6 @@
+// Package service предоставляет бизнес-логику приложения.
+//
+// Содержит сервисы для работы с URL, аутентификацией и состоянием сервиса.
 package service
 
 import (
@@ -17,6 +20,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// URLService предоставляет операции для управления короткими URL.
+//
+// Обрабатывает создание, получение и удаление URL, а также отправку
+// аудит-событий.
 type URLService struct {
 	repo         domainurl.URLRepository
 	cfg          *config.Config
@@ -24,6 +31,7 @@ type URLService struct {
 	auditManager *audit.Manager
 }
 
+// NewURLService создает новый URLService с указанными зависимостями.
 func NewURLService(repo domainurl.URLRepository, cfg *config.Config, logger *zap.Logger, auditManager *audit.Manager) *URLService {
 	return &URLService{
 		repo:         repo,
@@ -33,11 +41,27 @@ func NewURLService(repo domainurl.URLRepository, cfg *config.Config, logger *zap
 	}
 }
 
+// CreateShortURLResult содержит результат операции создания короткой URL.
 type CreateShortURLResult struct {
-	URL   string
+	// URL — сгенерированная или существующая короткая ссылка.
+	URL string
+	// IsNew — флаг, указывающий, что ссылка была создана в этой операции.
 	IsNew bool
 }
 
+// CreateShortURL создает новую короткую URL для указанного исходного URL.
+//
+// Если URL уже существует, возвращает существующую ссылку с IsNew=false.
+// Генерирует уникальный идентификатор, сохраняет URL и отправляет
+// аудит-событие.
+//
+// Пример использования:
+//
+//	result, err := urlService.CreateShortURL(ctx, "https://example.com", userID)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println("Short URL:", result.URL)
 func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, userID *uuid.UUID) (*CreateShortURLResult, error) {
 	for {
 		id, err := idgen.GenerateID()
@@ -81,6 +105,10 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, use
 	}
 }
 
+// CreateShortBatchURL создает несколько коротких URL за одну операцию.
+//
+// Принимает пакет запросов и возвращает пакет ответов с корреляционными
+// идентификаторами для сопоставления.
 func (s *URLService) CreateShortBatchURL(ctx context.Context, request dto.CreateBatchURLRequest, userID *uuid.UUID) (dto.CreateBatchURLResponse, error) {
 	var urlRows []domainurl.URL
 	var responses dto.CreateBatchURLResponse
@@ -133,6 +161,9 @@ func (s *URLService) CreateShortBatchURL(ctx context.Context, request dto.Create
 	return responses, nil
 }
 
+// GetOriginalURL возвращает исходный URL по короткому идентификатору.
+//
+// Возвращает URL и true, если найден, или пустой URL и false, если не найден.
 func (s *URLService) GetOriginalURL(ctx context.Context, id string) (domainurl.URL, bool) {
 	URL, err := s.repo.Get(ctx, id)
 
@@ -142,6 +173,7 @@ func (s *URLService) GetOriginalURL(ctx context.Context, id string) (domainurl.U
 	return URL, err
 }
 
+// GetUserOriginalURLs возвращает все URL, принадлежащие указанному пользователю.
 func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
 	urls, err := s.repo.GetAllByUserID(ctx, userID)
 	if err != nil {
@@ -151,6 +183,9 @@ func (s *URLService) GetUserOriginalURLs(ctx context.Context, userID *uuid.UUID)
 	return urls, nil
 }
 
+// DeleteURLsByUserID помечает указанные URL как удаленные для пользователя.
+//
+// Операция выполняется асинхронно с использованием пакетной обработки.
 func (s *URLService) DeleteURLsByUserID(ctx context.Context, IDs []string, userID *uuid.UUID) error {
 	start := time.Now()
 

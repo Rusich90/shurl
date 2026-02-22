@@ -1,10 +1,21 @@
+// Package domain предоставляет доменные модели и интерфейсы приложения.
+//
+// Содержит определения сущностей, ошибок и репозиториев для работы с URL.
 package domain
 
 import "github.com/google/uuid"
 
+// URL представляет собой сущность короткой ссылки.
+//
+// Содержит как короткий идентификатор, так и исходный URL,
+// а также информацию о пользователе и статусе удаления.
 type URL struct {
-	ShortURL    string
+	// ShortURL — уникальный короткий идентификатор ссылки.
+	ShortURL string
+	// OriginalURL — исходный (длинный) URL.
 	OriginalURL string
-	UserID      *uuid.UUID
-	IsDeleted   bool
+	// UserID — идентификатор пользователя, создавшего ссылку (опционально).
+	UserID *uuid.UUID
+	// IsDeleted — флаг, указывающий, что ссылка была удалена.
+	IsDeleted bool
 }

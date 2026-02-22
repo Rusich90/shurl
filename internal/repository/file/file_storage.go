@@ -1,3 +1,6 @@
+// Package file предоставляет реализацию хранилища URL на основе файловой системы.
+//
+// Использует JSON Lines формат для хранения данных в текстовом файле.
 package file
 
 import (
@@ -9,10 +12,14 @@ import (
 	domainurl "github.com/Rusich90/shurl.git/internal/domain/url"
 )
 
+// FileStorage реализует хранилище URL в файловой системе.
 type FileStorage struct {
 	fileName string
 }
 
+// NewFileStorage создает новое хранилище файлов.
+//
+// Создает файл при необходимости и возвращает указатель на FileStorage.
 func NewFileStorage(fileName string) (*FileStorage, error) {
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
@@ -25,6 +32,9 @@ func NewFileStorage(fileName string) (*FileStorage, error) {
 	}, nil
 }
 
+// SaveRow сохраняет одну запись URL в файл.
+//
+// Добавляет строку в конец файла в формате JSON.
 func (f *FileStorage) SaveRow(row domainurl.URL) error {
 	file, err := os.OpenFile(f.fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
@@ -44,6 +54,9 @@ func (f *FileStorage) SaveRow(row domainurl.URL) error {
 	return nil
 }
 
+// GetURLs считывает все URL из файла.
+//
+// Возвращает срез URL или пустой срез, если файл не существует.
 func (f *FileStorage) GetURLs() ([]domainurl.URL, error) {
 	file, err := os.Open(f.fileName)
 	if err != nil {

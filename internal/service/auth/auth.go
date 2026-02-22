@@ -1,3 +1,6 @@
+// Package auth предоставляет функции для аутентификации и авторизации.
+//
+// Использует JWT-токены для управления сессиями пользователей.
 package auth
 
 import (
@@ -8,21 +11,29 @@ import (
 	"github.com/google/uuid"
 )
 
+// Claims представляет собой утверждения JWT-токена.
+//
+// Содержит идентификатор пользователя и стандартные JWT-утверждения.
 type Claims struct {
 	UserID uuid.UUID `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
+// AuthService предоставляет операции для управления JWT-токенами.
 type AuthService struct {
 	secret []byte
 }
 
+// NewAuthService создает новый AuthService с указанным секретным ключом.
 func NewAuthService(secret string) *AuthService {
 	return &AuthService{
 		secret: []byte(secret),
 	}
 }
 
+// GenerateToken генерирует JWT-токен для указанного пользователя.
+//
+// Токен действителен 24 часа и подписывается секретным ключом сервиса.
 func (s *AuthService) GenerateToken(userID uuid.UUID) (string, error) {
 	claims := Claims{
 		UserID: userID,
@@ -41,6 +52,9 @@ func (s *AuthService) GenerateToken(userID uuid.UUID) (string, error) {
 	return tokenString, nil
 }
 
+// ValidateToken проверяет валидность JWT-токена и возвращает утверждения.
+//
+// Возвращает ошибку при невалидном токене или неудачной проверке подписи.
 func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
@@ -58,6 +72,9 @@ func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
+// GenerateUserID генерирует новый UUID для пользователя.
+//
+// Используется для создания идентификаторов при анонимном доступе.
 func (s *AuthService) GenerateUserID() uuid.UUID {
 	return uuid.New()
 }

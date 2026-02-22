@@ -24,6 +24,10 @@ import (
 	"go.uber.org/zap"
 )
 
+type contextKey string
+
+const userIDKey contextKey = "userID"
+
 func TestCreateShortURL(t *testing.T) {
 	tmpFile, err := os.CreateTemp("", "test_urls_*.jsonl")
 	if err != nil {
@@ -874,7 +878,7 @@ func TestCreateShortBatchURLWithDB_UserID(t *testing.T) {
 	c.Request.Header.Set("Content-Type", "application/json")
 
 	// Добавляем user ID в контекст
-	ctx := context.WithValue(c.Request.Context(), "user_id", &userID)
+	ctx := context.WithValue(c.Request.Context(), userIDKey, &userID)
 	c.Request = c.Request.WithContext(ctx)
 
 	handler.CreateShortBatchURL(c)

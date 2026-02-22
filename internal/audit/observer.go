@@ -1,3 +1,8 @@
+// Package audit предоставляет инструменты для аудита событий в системе.
+//
+// Аудит позволяет отслеживать ключевые события, такие как создание коротких URL
+// и переходы по ним, с возможностью отправки уведомлений в различные системы
+// (файловые логи, HTTP-сервисы).
 package audit
 
 import (
@@ -9,10 +14,20 @@ import (
 	"os"
 )
 
+// Observer — интерфейс для наблюдателей аудит-событий.
+//
+// Реализует паттерн "Наблюдатель" для асинхронной обработки событий.
 type Observer interface {
+	// Notify отправляет аудит-событие наблюдателю.
+	//
+	// Возвращает ошибку при неудачной отправке события.
 	Notify(ctx context.Context, event AuditEvent) error
 }
 
+// FileObserver — наблюдатель, записывающий аудит-события в файл.
+//
+// Использует буферизированный канал для асинхронной записи событий,
+// что позволяет избежать блокировки основного потока выполнения.
 type FileObserver struct {
 	filePath string
 	events   chan AuditEvent
@@ -20,6 +35,18 @@ type FileObserver struct {
 	done     chan struct{}
 }
 
+// NewFileObserver создает новый FileObserver, который будет записывать события в указанный файл.
+//
+// Файл создается при необходимости с правами 0644. Если файл уже существует,
+// новые события будут добавлены в конец файла.
+//
+// Пример использования:
+//
+//	observer, err := audit.NewFileObserver("/var/log/audit.log")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	defer observer.Close()
 func NewFileObserver(filePath string) (*FileObserver, error) {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -39,6 +66,10 @@ func NewFileObserver(filePath string) (*FileObserver, error) {
 	return fo, nil
 }
 
+// Notify добавляет аудит-событие в буфер для записи в файл.
+//
+// Метод неблокирующий — событие помещается в канал и будет записано
+// в отдельной горутине. Если контекст отменен, возвращается ошибка ctx.Err().
 func (fo *FileObserver) Notify(ctx context.Context, event AuditEvent) error {
 	select {
 	case <-ctx.Done():
@@ -48,11 +79,16 @@ func (fo *FileObserver) Notify(ctx context.Context, event AuditEvent) error {
 	}
 }
 
+// Close останавливает работу FileObserver и дожидается завершения записи
+// всех оставшихся событий.
 func (fo *FileObserver) Close() {
 	close(fo.stop)
 	<-fo.done
 }
 
+// writer — внутренняя горутина, записывающая события в файл.
+//
+// Запускается автоматически при создании FileObserver и работает до вызова Close().
 func (fo *FileObserver) writer() {
 	defer func() {
 		close(fo.done)
@@ -99,11 +135,17 @@ func (fo *FileObserver) writer() {
 	}
 }
 
+// HTTPObserver — наблюдатель, отправляющий аудит-события по HTTP.
+//
+// Отправляет события методом POST на указанный URL в формате JSON.
 type HTTPObserver struct {
 	url    string
 	client *http.Client
 }
 
+// NewHTTPObserver создает новый HTTPObserver для отправки событий по HTTP.
+//
+// Использует стандартный http.Client без дополнительной настройки.
 func NewHTTPObserver(url string) *HTTPObserver {
 	return &HTTPObserver{
 		url:    url,
@@ -111,6 +153,13 @@ func NewHTTPObserver(url string) *HTTPObserver {
 	}
 }
 
+// Notify отправляет аудит-событие по HTTP.
+//
+// Метод блокирующий и возвращает ошибку при:
+//   - Неудачной сериализации события в JSON
+//   - Ошибке создания HTTP-запроса
+//   - Ошибке отправки запроса
+//   - Нестатусе ответа 2xx
 func (ho *HTTPObserver) Notify(ctx context.Context, event AuditEvent) error {
 	data, err := json.Marshal(event)
 	if err != nil {

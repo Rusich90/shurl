@@ -1,3 +1,6 @@
+// Package middleware предоставляет функции-обработчики Gin middleware.
+//
+// Содержит middleware для логирования, сжатия и аутентификации запросов.
 package middleware
 
 import (
@@ -9,6 +12,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// AuthMiddleware проверяет JWT-токен в куки и устанавливает пользователя в контекст.
+//
+// Если токен отсутствует или невалиден, генерирует новый токен для анонимного пользователя.
 func AuthMiddleware(authService *auth.AuthService, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenCookie, err := c.Cookie("jwt")
