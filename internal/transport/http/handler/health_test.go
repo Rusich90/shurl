@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -18,7 +17,17 @@ import (
 )
 
 type MockURLRepository struct {
-	pingError error
+	pingError      error
+	getError       error
+	getResult      domainurl.URL
+	getResultOK    bool
+	getAllByUserID []domainurl.URL
+	getAllByUserIDError error
+	deleteURLsError error
+	saveIfNotExistsError error
+	saveBatchError error
+	getByOriginalURL string
+	getByOriginalURLOK bool
 }
 
 func (m *MockURLRepository) GetUserURLs(ctx context.Context, userID *uuid.UUID) (string, bool) {
@@ -26,27 +35,42 @@ func (m *MockURLRepository) GetUserURLs(ctx context.Context, userID *uuid.UUID) 
 }
 
 func (m *MockURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
-	return errors.New("not yet implemented")
+	if m.deleteURLsError != nil {
+		return m.deleteURLsError
+	}
+	return nil
 }
 
 func (m *MockURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bool) {
-	return domainurl.URL{}, false
+	if m.getError != nil {
+		return domainurl.URL{}, false
+	}
+	return m.getResult, m.getResultOK
 }
 
 func (m *MockURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
-	return nil, nil
+	if m.getAllByUserIDError != nil {
+		return nil, m.getAllByUserIDError
+	}
+	return m.getAllByUserID, nil
 }
 
 func (m *MockURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.URL) error {
+	if m.saveIfNotExistsError != nil {
+		return m.saveIfNotExistsError
+	}
 	return nil
 }
 
 func (m *MockURLRepository) SaveBatch(ctx context.Context, rows []domainurl.URL) error {
+	if m.saveBatchError != nil {
+		return m.saveBatchError
+	}
 	return nil
 }
 
 func (m *MockURLRepository) GetByOriginalURL(ctx context.Context, originalURL string) (string, bool) {
-	return "", false
+	return m.getByOriginalURL, m.getByOriginalURLOK
 }
 
 func (m *MockURLRepository) Close() error {

@@ -29,7 +29,7 @@ func NewFileObserver(filePath string) (*FileObserver, error) {
 
 	fo := &FileObserver{
 		filePath: filePath,
-		events:   make(chan AuditEvent, 1000),
+		events:   make(chan AuditEvent),
 		stop:     make(chan struct{}),
 		done:     make(chan struct{}),
 	}
@@ -41,10 +41,10 @@ func NewFileObserver(filePath string) (*FileObserver, error) {
 
 func (fo *FileObserver) Notify(ctx context.Context, event AuditEvent) error {
 	select {
-	case fo.events <- event:
-		return nil
 	case <-ctx.Done():
 		return ctx.Err()
+	case fo.events <- event:
+		return nil
 	}
 }
 

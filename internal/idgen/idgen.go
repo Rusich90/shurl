@@ -3,22 +3,26 @@ package idgen
 import (
 	"crypto/rand"
 	"errors"
-	"math/big"
 )
 
 const (
-	Charset  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	IDLength = 5
+	Charset     = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	IDLength    = 5
+	charsetSize = len(Charset)
 )
 
 func GenerateID() (string, error) {
 	result := make([]byte, IDLength)
-	for i := range result {
-		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(Charset))))
-		if err != nil {
-			return "", errors.New("failed to generate random number: " + err.Error())
-		}
-		result[i] = Charset[n.Int64()]
+	buffer := make([]byte, IDLength)
+
+	_, err := rand.Read(buffer)
+	if err != nil {
+		return "", errors.New("failed to read random bytes: " + err.Error())
 	}
+
+	for i := 0; i < IDLength; i++ {
+		result[i] = Charset[buffer[i]%byte(charsetSize)]
+	}
+
 	return string(result), nil
 }

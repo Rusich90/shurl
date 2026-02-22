@@ -191,6 +191,7 @@ func (h *Handler) DeleteURLsByUserID(c *gin.Context) {
 	}()
 
 	c.Status(http.StatusAccepted)
+	c.Data(http.StatusAccepted, "application/json", []byte{})
 }
 
 func (h *Handler) JSONCreateShortURL(c *gin.Context) {
