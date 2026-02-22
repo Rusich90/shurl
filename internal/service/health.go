@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Rusich90/shurl.git/internal/domain/url"
+	domain "github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/repository/file"
 	"github.com/Rusich90/shurl.git/internal/repository/postgres"
 	"github.com/Rusich90/shurl.git/internal/transport/http/dto"

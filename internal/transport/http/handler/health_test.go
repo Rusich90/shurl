@@ -17,17 +17,17 @@ import (
 )
 
 type MockURLRepository struct {
-	pingError      error
-	getError       error
-	getResult      domainurl.URL
-	getResultOK    bool
-	getAllByUserID []domainurl.URL
-	getAllByUserIDError error
-	deleteURLsError error
+	pingError            error
+	getError             error
+	getResult            domainurl.URL
+	getResultOK          bool
+	getAllByUserID       []domainurl.URL
+	getAllByUserIDError  error
+	deleteURLsError      error
 	saveIfNotExistsError error
-	saveBatchError error
-	getByOriginalURL string
-	getByOriginalURLOK bool
+	saveBatchError       error
+	getByOriginalURL     string
+	getByOriginalURLOK   bool
 }
 
 func (m *MockURLRepository) GetUserURLs(ctx context.Context, userID *uuid.UUID) (string, bool) {

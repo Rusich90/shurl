@@ -8,7 +8,7 @@ import (
 
 	"github.com/Rusich90/shurl.git/internal/audit"
 	"github.com/Rusich90/shurl.git/internal/config"
-	"github.com/Rusich90/shurl.git/internal/domain/url"
+	domain "github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/repository/file"
 	postgresrepo "github.com/Rusich90/shurl.git/internal/repository/postgres"
 	"github.com/Rusich90/shurl.git/internal/service"

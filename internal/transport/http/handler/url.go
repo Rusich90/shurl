@@ -13,7 +13,7 @@ import (
 	"github.com/Rusich90/shurl.git/internal/service"
 	"github.com/Rusich90/shurl.git/internal/transport/http/authcontext"
 	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
-	"github.com/Rusich90/shurl.git/internal/transport/http/validator"
+	validators "github.com/Rusich90/shurl.git/internal/transport/http/validator"
 	"github.com/gin-gonic/gin"
 	"github.com/mailru/easyjson"
 	"go.uber.org/zap"
