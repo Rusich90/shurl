@@ -1,3 +1,6 @@
+// Package postgres предоставляет реализацию репозитория URL на основе PostgreSQL.
+//
+// Использует pgx для подключения к базе данных и поддерживает миграции.
 package postgres
 
 import (
@@ -13,16 +16,21 @@ import (
 	"github.com/lib/pq"
 )
 
+// DBURLRepository реализует репозиторий URL для PostgreSQL.
 type DBURLRepository struct {
 	db *sql.DB
 }
 
+// NewDBURLRepository создает новый репозиторий с указанным подключением к БД.
 func NewDBURLRepository(db *sql.DB) *DBURLRepository {
 	return &DBURLRepository{
 		db: db,
 	}
 }
 
+// Get возвращает URL по короткому идентификатору.
+//
+// Возвращает URL и true, если найден, или пустой URL и false, если не найден.
 func (r *DBURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bool) {
 	var url domainurl.URL
 	query := `SELECT short_url, original_url, user_id, is_deleted FROM urls WHERE short_url = $1`
@@ -34,11 +42,14 @@ func (r *DBURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bo
 	return url, true
 }
 
+// GetAllByUserID возвращает все URL, принадлежащие указанному пользователю.
+//
+// Возвращает срез URL в порядке убывания времени создания.
 func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
 	query := `
 		SELECT short_url, original_url, user_id, is_deleted
-		FROM urls 
-		WHERE user_id = $1 
+		FROM urls
+		WHERE user_id = $1
 		ORDER BY created_at DESC
 	`
 	rows, err := r.db.QueryContext(ctx, query, userID)
@@ -64,6 +75,9 @@ func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID)
 	return urls, nil
 }
 
+// SaveIfNotExists сохраняет URL, если короткий идентификатор еще не занят.
+//
+// Возвращает ErrShortURLConflict или ErrOriginalURLConflict при конфликте.
 func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.URL) error {
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM urls WHERE short_url = $1)`
@@ -88,9 +102,10 @@ func (r *DBURLRepository) SaveIfNotExists(ctx context.Context, row domainurl.URL
 	return nil
 }
 
+// DeleteURLs помечает указанные URL как удаленные для указанного пользователя.
 func (r *DBURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
 	query := `
-		UPDATE urls 
+		UPDATE urls
 		SET is_deleted = true
 		WHERE short_url = ANY($1) AND user_id = $2
 	`
@@ -102,6 +117,7 @@ func (r *DBURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *
 	return nil
 }
 
+// SaveBatch сохраняет несколько URL в одной транзакции.
 func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []domainurl.URL) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -146,6 +162,7 @@ func (r *DBURLRepository) SaveBatch(ctx context.Context, rows []domainurl.URL) e
 	return nil
 }
 
+// GetByOriginalURL возвращает короткий идентификатор по исходному URL.
 func (r *DBURLRepository) GetByOriginalURL(ctx context.Context, originalURL string) (string, bool) {
 	var shortURL string
 	query := `SELECT short_url FROM urls WHERE original_url = $1`
@@ -160,10 +177,12 @@ func (r *DBURLRepository) GetByOriginalURL(ctx context.Context, originalURL stri
 	return shortURL, true
 }
 
+// Close закрывает соединение с базой данных.
 func (r *DBURLRepository) Close() error {
 	return r.db.Close()
 }
 
+// Ping проверяет доступность базы данных.
 func (r *DBURLRepository) Ping(ctx context.Context) error {
 	return r.db.PingContext(ctx)
 }

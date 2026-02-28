@@ -1,3 +1,6 @@
+// Package handler предоставляет HTTP-обработчики (хендлеры) для API-эндпоинтов.
+//
+// Содержит обработчики для создания, получения и удаления коротких URL.
 package handler
 
 import (
@@ -13,18 +16,20 @@ import (
 	"github.com/Rusich90/shurl.git/internal/service"
 	"github.com/Rusich90/shurl.git/internal/transport/http/authcontext"
 	"github.com/Rusich90/shurl.git/internal/transport/http/dto"
-	"github.com/Rusich90/shurl.git/internal/transport/http/validator"
+	validators "github.com/Rusich90/shurl.git/internal/transport/http/validator"
 	"github.com/gin-gonic/gin"
 	"github.com/mailru/easyjson"
 	"go.uber.org/zap"
 )
 
+// Handler обрабатывает HTTP-запросы для работы с короткими URL.
 type Handler struct {
 	urlService *service.URLService
 	cfg        *config.Config
 	logger     *zap.Logger
 }
 
+// NewHandler создает новый Handler с указанными зависимостями.
 func NewHandler(urlService *service.URLService, cfg *config.Config, logger *zap.Logger) *Handler {
 	return &Handler{
 		urlService: urlService,
@@ -33,6 +38,10 @@ func NewHandler(urlService *service.URLService, cfg *config.Config, logger *zap.
 	}
 }
 
+// CreateShortURL обрабатывает POST-запрос для создания короткой URL.
+//
+// Принимает исходный URL в теле запроса и возвращает короткую ссылку.
+// Возвращает статус 201 при создании новой ссылки или 409 при существовании.
 func (h *Handler) CreateShortURL(c *gin.Context) {
 	if c.Request.Method != http.MethodPost {
 		c.AbortWithStatus(http.StatusMethodNotAllowed)
@@ -78,6 +87,10 @@ func (h *Handler) CreateShortURL(c *gin.Context) {
 	c.String(statusCode, result.URL)
 }
 
+// GetOriginalURL обрабатывает GET-запрос для получения исходного URL по короткому ID.
+//
+// Выполняет редирект на исходный URL. Возвращает 404 если URL не найдена,
+// 410 если URL удалена.
 func (h *Handler) GetOriginalURL(c *gin.Context) {
 	if c.Request.Method != http.MethodGet {
 		c.AbortWithStatus(http.StatusMethodNotAllowed)
@@ -104,6 +117,9 @@ func (h *Handler) GetOriginalURL(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, url.OriginalURL)
 }
 
+// GetUserOriginalURLs обрабатывает GET-запрос для получения всех URL пользователя.
+//
+// Возвращает JSON-список URL с короткими и исходными ссылками.
 func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 	if c.Request.Method != http.MethodGet {
 		c.AbortWithStatus(http.StatusMethodNotAllowed)
@@ -152,6 +168,10 @@ func (h *Handler) GetUserOriginalURLs(c *gin.Context) {
 
 }
 
+// DeleteURLsByUserID обрабатывает DELETE-запрос для удаления URL пользователя.
+//
+// Принимает список ID в теле запроса и помечает их как удаленные.
+// Возвращает 202 (Accepted) для асинхронной обработки.
 func (h *Handler) DeleteURLsByUserID(c *gin.Context) {
 	if c.Request.Method != http.MethodDelete {
 		c.AbortWithStatus(http.StatusMethodNotAllowed)
@@ -191,8 +211,12 @@ func (h *Handler) DeleteURLsByUserID(c *gin.Context) {
 	}()
 
 	c.Status(http.StatusAccepted)
+	c.Data(http.StatusAccepted, "application/json", []byte{})
 }
 
+// JSONCreateShortURL обрабатывает POST-запрос для создания короткой URL с JSON-ответом.
+//
+// Принимает JSON-объект с полем "url" и возвращает JSON-объект с полем "result".
 func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 	if c.Request.Method != http.MethodPost {
 		c.AbortWithStatus(http.StatusMethodNotAllowed)
@@ -247,6 +271,10 @@ func (h *Handler) JSONCreateShortURL(c *gin.Context) {
 	c.Data(statusCode, "application/json", respBytes)
 }
 
+// CreateShortBatchURL обрабатывает POST-запрос для создания нескольких коротких URL.
+//
+// Принимает массив объектов с correlation_id и original_url.
+// Возвращает массив с correlation_id и short_url для каждого элемента.
 func (h *Handler) CreateShortBatchURL(c *gin.Context) {
 	if c.Request.Method != http.MethodPost {
 		c.AbortWithStatus(http.StatusMethodNotAllowed)

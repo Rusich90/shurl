@@ -1,3 +1,7 @@
+// Package batch предоставляет инструменты для пакетной обработки данных.
+//
+// Использует паттерн "Worker Pool" для параллельной обработки больших
+// объемов данных с контролем ошибок и статистикой.
 package batch
 
 import (
@@ -9,14 +13,24 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// ProcessFunc определяет функцию для обработки пакета элементов.
+//
+// Принимает контекст, срез элементов и идентификатор пользователя.
 type ProcessFunc func(ctx context.Context, items []string, userID *uuid.UUID) error
 
+// BatchProcessor управляет пакетной обработкой данных.
+//
+// Распределяет задачи между несколькими воркерами и собирает статистику.
 type BatchProcessor struct {
 	numWorkers int
 	chunkSize  int
 	logger     *zap.Logger
 }
 
+// NewBatchProcessor создает новый BatchProcessor с указанными параметрами.
+//
+// numWorkers — количество параллельных воркеров.
+// chunkSize — размер одного пакета элементов.
 func NewBatchProcessor(numWorkers, chunkSize int, logger *zap.Logger) (*BatchProcessor, error) {
 	if numWorkers <= 0 {
 		return nil, fmt.Errorf("numWorkers must be positive, got %d", numWorkers)
@@ -33,6 +47,9 @@ func NewBatchProcessor(numWorkers, chunkSize int, logger *zap.Logger) (*BatchPro
 	}, nil
 }
 
+// ProcessBatch обрабатывает срез элементов с использованием пакетной обработки.
+//
+// Возвращает статистику обработки и ошибку при неудаче.
 func (bp *BatchProcessor) ProcessBatch(ctx context.Context, items []string, userID *uuid.UUID, processFunc ProcessFunc) (*ProcessingStats, error) {
 	if len(items) == 0 {
 		return &ProcessingStats{}, nil
@@ -76,6 +93,9 @@ func (bp *BatchProcessor) ProcessBatch(ctx context.Context, items []string, user
 	return stats, nil
 }
 
+// generateChunks разбивает срез элементов на пакеты заданного размера.
+//
+// Возвращает канал, через который передаются пакеты элементов.
 func (bp *BatchProcessor) generateChunks(items []string, chunkSize int) <-chan []string {
 	inputCh := make(chan []string)
 

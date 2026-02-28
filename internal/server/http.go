@@ -1,3 +1,7 @@
+// Package server предоставляет функции для настройки и запуска HTTP-сервера.
+//
+// Содержит функцию SetupServer для инициализации всех компонентов приложения
+// и настройки маршрутов.
 package server
 
 import (
@@ -6,8 +10,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Rusich90/shurl.git/internal/audit"
 	"github.com/Rusich90/shurl.git/internal/config"
-	"github.com/Rusich90/shurl.git/internal/domain/url"
+	domain "github.com/Rusich90/shurl.git/internal/domain/url"
 	"github.com/Rusich90/shurl.git/internal/repository/file"
 	postgresrepo "github.com/Rusich90/shurl.git/internal/repository/postgres"
 	"github.com/Rusich90/shurl.git/internal/service"
@@ -22,6 +27,22 @@ import (
 	"go.uber.org/zap"
 )
 
+// SetupServer инициализирует и настраивает HTTP-сервер с указанными зависимостями.
+//
+// Создает репозиторий (PostgreSQL или файловый), логгер, сервисы аутентификации,
+// аудита и URL. Регистрирует middleware и маршруты.
+//
+// Пример использования:
+//
+//	cfg := config.InitConfig()
+//	r, urlRepo, err := server.SetupServer(cfg)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	defer urlRepo.Close()
+//
+//	log.Printf("Starting server on %s", cfg.ServerAddress)
+//	r.Run(cfg.ServerAddress)
 func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) {
 	var db *sql.DB
 	var urlRepo domain.URLRepository
@@ -66,7 +87,22 @@ func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) 
 
 	authService := auth.NewAuthService(cfg.AuthSecret)
 
-	urlService := service.NewURLService(urlRepo, cfg, log)
+	auditManager := audit.NewManager(log)
+
+	if cfg.AuditFile != "" {
+		fileObserver, err := audit.NewFileObserver(cfg.AuditFile)
+		if err != nil {
+			return nil, nil, fmt.Errorf("audit.NewFileObserver: %w", err)
+		}
+		auditManager.RegisterObserver(fileObserver)
+	}
+
+	if cfg.AuditURL != "" {
+		httpObserver := audit.NewHTTPObserver(cfg.AuditURL)
+		auditManager.RegisterObserver(httpObserver)
+	}
+
+	urlService := service.NewURLService(urlRepo, cfg, log, auditManager)
 	healthService := service.NewHealthService(urlRepo)
 
 	urlHandler := handler.NewHandler(urlService, cfg, log)
@@ -93,6 +129,9 @@ func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) 
 	return r, urlRepo, nil
 }
 
+// runMigrations выполняет миграции базы данных.
+//
+// Использует golang-migrate для применения всех доступных миграций.
 func runMigrations(db *sql.DB, cfg *config.Config) error {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {

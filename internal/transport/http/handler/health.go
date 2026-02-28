@@ -1,3 +1,6 @@
+// Package handler предоставляет HTTP-обработчики (хендлеры) для API-эндпоинтов.
+//
+// Содержит обработчики для создания, получения и удаления коротких URL.
 package handler
 
 import (
@@ -9,11 +12,13 @@ import (
 	"go.uber.org/zap"
 )
 
+// HealthHandler обрабатывает HTTP-запросы для проверки состояния сервиса.
 type HealthHandler struct {
 	healthService *service.HealthService
 	logger        *zap.Logger
 }
 
+// NewHealthHandler создает новый HealthHandler с указанными зависимостями.
 func NewHealthHandler(healthService *service.HealthService, logger *zap.Logger) *HealthHandler {
 	return &HealthHandler{
 		healthService: healthService,
@@ -21,6 +26,9 @@ func NewHealthHandler(healthService *service.HealthService, logger *zap.Logger) 
 	}
 }
 
+// Ping обрабатывает GET-запрос для проверки состояния сервиса.
+//
+// Возвращает JSON-объект с информацией о статусе и типе хранилища.
 func (h *HealthHandler) Ping(c *gin.Context) {
 	response := h.healthService.Ping()
 
