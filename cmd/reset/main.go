@@ -367,7 +367,7 @@ func generateFieldReset(f FieldInfo) string {
 	if f.IsPtr && f.IsStruct && f.IsSamePackageStruct {
 		sb.WriteString(fmt.Sprintf("    if rs.%s != nil {\n", f.Name))
 		sb.WriteString(fmt.Sprintf("        rs.%s.Reset()\n", f.Name))
-		sb.WriteString(fmt.Sprintf("    }\n\n"))
+		sb.WriteString("    }\n\n")
 		return sb.String()
 	}
 
@@ -387,23 +387,23 @@ func generateFieldReset(f FieldInfo) string {
 	if f.IsPtr {
 		sb.WriteString(fmt.Sprintf("    if rs.%s != nil {\n", f.Name))
 		sb.WriteString(fmt.Sprintf("        *rs.%s = %s\n", f.Name, getZeroValue(f.Type)))
-		sb.WriteString(fmt.Sprintf("    }\n\n"))
+		sb.WriteString("    }\n\n")
 		return sb.String()
 	}
 
 	// Для слайсов
 	if f.IsSlice {
 		sb.WriteString(fmt.Sprintf("    if rs.%s != nil {\n", f.Name))
-		sb.WriteString(fmt.Sprintf("        rs.%s = rs.%s[:0]\n", f.Name, f.Name))
-		sb.WriteString(fmt.Sprintf("    }\n\n"))
+		sb.WriteString("        rs." + f.Name + " = rs." + f.Name + "[:0]\n")
+		sb.WriteString("    }\n\n")
 		return sb.String()
 	}
 
 	// Для мап
 	if f.IsMap {
 		sb.WriteString(fmt.Sprintf("    if rs.%s != nil {\n", f.Name))
-		sb.WriteString(fmt.Sprintf("        clear(rs.%s)\n", f.Name))
-		sb.WriteString(fmt.Sprintf("    }\n\n"))
+		sb.WriteString("        clear(rs." + f.Name + ")\n")
+		sb.WriteString("    }\n\n")
 		return sb.String()
 	}
 
@@ -424,7 +424,7 @@ func generateFieldReset(f FieldInfo) string {
 	}
 
 	// Для примитивов
-	sb.WriteString(fmt.Sprintf("    rs.%s = %s\n\n", f.Name, getZeroValue(f.Type)))
+	sb.WriteString("    rs." + f.Name + " = " + getZeroValue(f.Type) + "\n\n")
 	return sb.String()
 }
 

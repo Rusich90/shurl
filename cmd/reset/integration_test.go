@@ -562,6 +562,7 @@ type ThirdStruct struct {
 	} else if field.Type == "" {
 		// Для interface{} Type может быть пустым в текущей реализации
 		// Это нормально, так как interface{} не имеет конкретного типа
+		_ = field // явно используем переменную, чтобы избежать предупреждения
 	}
 
 	if field, exists := fieldsMap["ErrorField"]; !exists {
