@@ -375,11 +375,11 @@ func generateFieldReset(f FieldInfo) string {
 	if f.IsPtr && f.IsStruct {
 		sb.WriteString(fmt.Sprintf("    if rs.%s != nil {\n", f.Name))
 		sb.WriteString(fmt.Sprintf("        if resetter, ok := rs.%s.(interface{ Reset() }); ok {\n", f.Name))
-		sb.WriteString(fmt.Sprintf("            resetter.Reset()\n"))
-		sb.WriteString(fmt.Sprintf("        } else {\n"))
+		sb.WriteString("            resetter.Reset()\n")
+		sb.WriteString("        } else {\n")
 		sb.WriteString(fmt.Sprintf("            *rs.%s = %s{}\n", f.Name, f.Type))
-		sb.WriteString(fmt.Sprintf("        }\n"))
-		sb.WriteString(fmt.Sprintf("    }\n\n"))
+		sb.WriteString("        }\n")
+		sb.WriteString("    }\n\n")
 		return sb.String()
 	}
 
@@ -415,10 +415,10 @@ func generateFieldReset(f FieldInfo) string {
 		} else {
 			// Для структур из других пакетов используем type assertion
 			sb.WriteString(fmt.Sprintf("    if resetter, ok := rs.%s.(interface{ Reset() }); ok {\n", f.Name))
-			sb.WriteString(fmt.Sprintf("        resetter.Reset()\n"))
-			sb.WriteString(fmt.Sprintf("    } else {\n"))
+			sb.WriteString("        resetter.Reset()\n")
+			sb.WriteString("    } else {\n")
 			sb.WriteString(fmt.Sprintf("        rs.%s = %s{}\n", f.Name, f.Type))
-			sb.WriteString(fmt.Sprintf("    }\n\n"))
+			sb.WriteString("    }\n\n")
 		}
 		return sb.String()
 	}
