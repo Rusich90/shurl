@@ -51,7 +51,7 @@ func TestSetupServer_FileStorage(t *testing.T) {
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/ping", nil)
 	router.ServeHTTP(w, req)
-	
+
 	// Проверяем, что middleware отработали корректно
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -71,7 +71,7 @@ func TestSetupServer_Database(t *testing.T) {
 	// Для полноценного тестирования с БД потребуется запущенный PostgreSQL
 	// В данном тесте мы просто проверим, что функция не возвращает ошибку при корректной конфигурации
 	// и что репозиторий является DBURLRepository
-	
+
 	// Создаем временную базу данных в памяти
 	db, err := sql.Open("pgx", "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
 	if err != nil {
@@ -186,7 +186,7 @@ func TestRunMigrations(t *testing.T) {
 	err = db.QueryRow(query).Scan(&exists)
 	assert.NoError(t, err)
 	assert.True(t, exists, "Table 'shurl' should exist after migrations")
-	
+
 	// Удаляем таблицу после теста
 	db.Exec("DROP TABLE IF EXISTS shurl")
 }

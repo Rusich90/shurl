@@ -7,7 +7,7 @@ import (
 func TestResetableStruct_Reset(t *testing.T) {
 	// Создаем строку, на которую будем ссылаться
 	strVal := "hello world"
-	
+
 	// Создаем вложенный объект
 	child := &ResetableStruct{
 		i:     42,

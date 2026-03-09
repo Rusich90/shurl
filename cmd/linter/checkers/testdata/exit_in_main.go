@@ -7,5 +7,5 @@ import (
 
 func main() {
 	log.Fatal("error") // OK - in main
-	os.Exit(1)       // OK - in main
+	os.Exit(1)         // OK - in main
 }

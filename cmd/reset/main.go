@@ -21,12 +21,12 @@ type StructInfo struct {
 
 // FieldInfo содержит информацию о поле структуры
 type FieldInfo struct {
-	Name              string
-	Type              string
-	IsPtr             bool
-	IsSlice           bool
-	IsMap             bool
-	IsStruct          bool
+	Name                string
+	Type                string
+	IsPtr               bool
+	IsSlice             bool
+	IsMap               bool
+	IsStruct            bool
 	IsSamePackageStruct bool
 }
 
@@ -122,6 +122,11 @@ func scanPackages(rootDir string) map[PackageInfo][]StructInfo {
 func getPackagePath(rootDir, filePath string) string {
 	relPath, err := filepath.Rel(rootDir, filePath)
 	if err != nil {
+		return ""
+	}
+
+	// Проверяем, что путь находится внутри rootDir
+	if strings.HasPrefix(relPath, "..") {
 		return ""
 	}
 

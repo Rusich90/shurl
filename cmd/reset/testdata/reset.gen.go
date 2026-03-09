@@ -3,43 +3,42 @@ package testdata
 
 // Reset сбрасывает состояние структуры ResetableStruct к начальным значениям
 func (rs *ResetableStruct) Reset() {
-    if rs == nil {
-        return
-    }
+	if rs == nil {
+		return
+	}
 
-    rs.i = 0
+	rs.i = 0
 
-    rs.str = ""
+	rs.str = ""
 
-    if rs.strP != nil {
-        *rs.strP = ""
-    }
+	if rs.strP != nil {
+		*rs.strP = ""
+	}
 
-    if rs.s != nil {
-        rs.s = rs.s[:0]
-    }
+	if rs.s != nil {
+		rs.s = rs.s[:0]
+	}
 
-    if rs.m != nil {
-        clear(rs.m)
-    }
+	if rs.m != nil {
+		clear(rs.m)
+	}
 
-    if rs.child != nil {
-        rs.child.Reset()
-    }
+	if rs.child != nil {
+		rs.child.Reset()
+	}
 
 }
 
 // Reset сбрасывает состояние структуры ResetableStruct2 к начальным значениям
 func (rs *ResetableStruct2) Reset() {
-    if rs == nil {
-        return
-    }
+	if rs == nil {
+		return
+	}
 
-    rs.i = 0
+	rs.i = 0
 
-    rs.str = ""
+	rs.str = ""
 
-    rs.child.Reset()
+	rs.child.Reset()
 
 }
-
