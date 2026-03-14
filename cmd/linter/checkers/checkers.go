@@ -55,10 +55,11 @@ func exitChecker(pass *analysis.Pass) {
 				ast.Inspect(fn.Body, func(n ast.Node) bool {
 					if call, ok := n.(*ast.CallExpr); ok {
 						if fun, ok := call.Fun.(*ast.SelectorExpr); ok {
-							// Проверка log.Fatal
-							if ident, ok := fun.X.(*ast.Ident); ok {
-								if ident.Name == "log" && fun.Sel.Name == "Fatal" {
-									pass.Reportf(call.Pos(), "вызов log.Fatal вне функции main в пакете main")
+							// Проверка log.Fatal, log.Fatalf, log.Fatalln
+							if ident, ok := fun.X.(*ast.Ident); ok && ident.Name == "log" {
+								switch fun.Sel.Name {
+								case "Fatal", "Fatalf", "Fatalln":
+									pass.Reportf(call.Pos(), "вызов log.%s вне функции main в пакете main", fun.Sel.Name)
 								}
 							}
 							// Проверка os.Exit
