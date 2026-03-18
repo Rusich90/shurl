@@ -9,7 +9,7 @@ import (
 
 func TestInitConfig(t *testing.T) {
 	oldEnv := map[string]string{}
-	keys := []string{"SERVER_ADDRESS", "BASE_URL", "FILE_STORAGE_PATH", "DATABASE_DSN", "MIGRATIONS_PATH", "AUTH_SECRET", "AUDIT_FILE", "AUDIT_URL"}
+	keys := []string{"SERVER_ADDRESS", "BASE_URL", "FILE_STORAGE_PATH", "DATABASE_DSN", "MIGRATIONS_PATH", "AUTH_SECRET", "AUDIT_FILE", "AUDIT_URL", "ENABLE_HTTPS"}
 	for _, k := range keys {
 		if v, ok := os.LookupEnv(k); ok {
 			oldEnv[k] = v
@@ -36,4 +36,5 @@ func TestInitConfig(t *testing.T) {
 	assert.Equal(t, "default_secret_key", cfg.AuthSecret)
 	assert.Equal(t, "", cfg.AuditFile)
 	assert.Equal(t, "", cfg.AuditURL)
+	assert.Equal(t, false, cfg.EnableHTTPS)
 }

@@ -32,6 +32,8 @@ type Config struct {
 	AuditFile string
 	// AuditURL — URL для отправки аудит-событий (если задан, используется HTTPObserver).
 	AuditURL string
+	// EnableHTTPS — флаг для включения HTTPS.
+	EnableHTTPS bool
 }
 
 // InitConfig инициализирует конфигурацию из флагов командной строки и переменных окружения.
@@ -46,11 +48,12 @@ type Config struct {
 //	-s, --secret      Секретный ключ для JWT (по умолчанию: default_secret_key)
 //	--audit-file      Путь к файлу аудит-логов
 //	--audit-url       URL для аудит-логов
+//	--enable-https     Включение HTTPS (по умолчанию: false)
 //
 // Поддерживаемые переменные окружения:
 //
 //	SERVER_ADDRESS, BASE_URL, FILE_STORAGE_PATH, DATABASE_DSN, MIGRATIONS_PATH,
-//	AUTH_SECRET, AUDIT_FILE, AUDIT_URL
+//	AUTH_SECRET, AUDIT_FILE, AUDIT_URL, ENABLE_HTTPS
 //
 // Пример использования:
 //
@@ -73,6 +76,7 @@ func InitConfig() *Config {
 	flag.StringVar(&config.AuthSecret, "s", "default_secret_key", "Secret key for JWT signing")
 	flag.StringVar(&config.AuditFile, "audit-file", "", "Path to audit log file")
 	flag.StringVar(&config.AuditURL, "audit-url", "", "URL for audit log service")
+	flag.BoolVar(&config.EnableHTTPS, "enable-https", false, "Enable HTTPS")
 	flag.Parse()
 
 	if envServAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
@@ -105,6 +109,10 @@ func InitConfig() *Config {
 
 	if envAuditURL, exists := os.LookupEnv("AUDIT_URL"); exists {
 		config.AuditURL = envAuditURL
+	}
+
+	if envEnableHTTPS, exists := os.LookupEnv("ENABLE_HTTPS"); exists {
+		config.EnableHTTPS = envEnableHTTPS == "true"
 	}
 
 	return config

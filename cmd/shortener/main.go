@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
+
+	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/Rusich90/shurl.git/internal/config"
 	"github.com/Rusich90/shurl.git/internal/server"
@@ -23,9 +26,30 @@ func main() {
 
 	printBuildInfo()
 
-	log.Printf("Starting server on %s\n", cfg.ServerAddress)
-	if err := r.Run(cfg.ServerAddress); err != nil {
-		log.Fatalf("Server failed to start: %v\n", err)
+	if cfg.EnableHTTPS {
+		log.Printf("Starting HTTPS server on %s\n", cfg.ServerAddress)
+		// Используем autocert для автоматического получения сертификатов Let's Encrypt
+		m := &autocert.Manager{
+			Prompt: autocert.AcceptTOS,
+			// Можно добавить HostPolicy для ограничения доменов, если нужно
+			// HostPolicy: autocert.HostWhitelist("yourdomain.com"),
+		}
+
+		server := &http.Server{
+			Addr:      cfg.ServerAddress,
+			TLSConfig: m.TLSConfig(),
+			Handler:   r,
+		}
+
+		// Запуск HTTPS сервера
+		if err := server.ListenAndServeTLS("", ""); err != nil {
+			log.Fatalf("HTTPS Server failed to start: %v\n", err)
+		}
+	} else {
+		log.Printf("Starting server on %s\n", cfg.ServerAddress)
+		if err := r.Run(cfg.ServerAddress); err != nil {
+			log.Fatalf("Server failed to start: %v\n", err)
+		}
 	}
 }
 
