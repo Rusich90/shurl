@@ -31,7 +31,7 @@ func TestSetupServer_FileStorage(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 
-	router, urlRepo, err := SetupServer(cfg)
+	router, urlRepo, _, err := SetupServer(cfg)
 	require.NoError(t, err)
 	require.NotNil(t, router)
 	require.NotNil(t, urlRepo)
@@ -107,7 +107,7 @@ func TestSetupServer_Database(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 
-	router, urlRepo, err := SetupServer(cfg)
+	router, urlRepo, _, err := SetupServer(cfg)
 	require.NoError(t, err)
 	require.NotNil(t, router)
 	require.NotNil(t, urlRepo)
@@ -132,7 +132,7 @@ func TestSetupServer_InvalidDBConnection(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 
-	router, urlRepo, err := SetupServer(cfg)
+	router, urlRepo, _, err := SetupServer(cfg)
 	assert.Error(t, err)
 	assert.Nil(t, router)
 	assert.Nil(t, urlRepo)
@@ -148,7 +148,7 @@ func TestSetupServer_InvalidFileStoragePath(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 
-	router, urlRepo, err := SetupServer(cfg)
+	router, urlRepo, _, err := SetupServer(cfg)
 	assert.Error(t, err)
 	assert.Nil(t, router)
 	assert.Nil(t, urlRepo)

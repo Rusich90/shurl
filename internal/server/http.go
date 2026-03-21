@@ -35,15 +35,16 @@ import (
 // Пример использования:
 //
 //	cfg := config.InitConfig()
-//	r, urlRepo, err := server.SetupServer(cfg)
+//	r, urlRepo, auditManager, err := server.SetupServer(cfg)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	defer urlRepo.Close()
+//	defer auditManager.Close()
 //
 //	log.Printf("Starting server on %s", cfg.ServerAddress)
 //	r.Run(cfg.ServerAddress)
-func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) {
+func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, *audit.Manager, error) {
 	var db *sql.DB
 	var urlRepo domain.URLRepository
 
@@ -51,37 +52,37 @@ func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) 
 		var err error
 		db, err = sql.Open("pgx", cfg.DatabaseDSN)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed DB connect open: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed DB connect open: %w", err)
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		if err = db.PingContext(ctx); err != nil {
-			return nil, nil, fmt.Errorf("failed DB ping: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed DB ping: %w", err)
 		}
 
 		if err = runMigrations(db, cfg); err != nil {
-			return nil, nil, fmt.Errorf("failed to run migrations: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to run migrations: %w", err)
 		}
 
 		urlRepo = postgresrepo.NewDBURLRepository(db)
 	} else {
 		fileStorage, err := file.NewFileStorage(cfg.FileStoragePath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to initialize file storage: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to initialize file storage: %w", err)
 		}
 
 		fileRepo, err := file.NewFileURLRepository(*fileStorage)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to initialize file repository: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to initialize file repository: %w", err)
 		}
 		urlRepo = fileRepo
 	}
 
 	log, err := zap.NewProduction()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create logger: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to create logger: %w", err)
 	}
 	defer log.Sync()
 
@@ -92,7 +93,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) 
 	if cfg.AuditFile != "" {
 		fileObserver, err := audit.NewFileObserver(cfg.AuditFile)
 		if err != nil {
-			return nil, nil, fmt.Errorf("audit.NewFileObserver: %w", err)
+			return nil, nil, nil, fmt.Errorf("audit.NewFileObserver: %w", err)
 		}
 		auditManager.RegisterObserver(fileObserver)
 	}
@@ -126,7 +127,7 @@ func SetupServer(cfg *config.Config) (*gin.Engine, domain.URLRepository, error) 
 		api.DELETE("/user/urls", urlHandler.DeleteURLsByUserID)
 	}
 
-	return r, urlRepo, nil
+	return r, urlRepo, auditManager, nil
 }
 
 // runMigrations выполняет миграции базы данных.

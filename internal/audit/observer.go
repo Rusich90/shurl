@@ -24,6 +24,13 @@ type Observer interface {
 	Notify(ctx context.Context, event AuditEvent) error
 }
 
+// Closer — расширение Observer с возможностью закрытия.
+type Closer interface {
+	Observer
+	// Close останавливает работу наблюдателя и дожидается завершения всех операций.
+	Close()
+}
+
 // FileObserver — наблюдатель, записывающий аудит-события в файл.
 //
 // Использует буферизированный канал для асинхронной записи событий,
