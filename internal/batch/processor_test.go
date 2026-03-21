@@ -424,3 +424,91 @@ func BenchmarkProcessingStats_IncrementProcessedChunks_Parallel(b *testing.B) {
 		}
 	})
 }
+
+func TestProcessingStats_AddSuccessful(t *testing.T) {
+	stats := &ProcessingStats{}
+
+	stats.AddSuccessful(10)
+
+	if stats.SuccessfulDeletes != 10 {
+		t.Errorf("expected 10 successful, got %d", stats.SuccessfulDeletes)
+	}
+}
+
+func TestProcessingStats_AddSuccessful_Multiple(t *testing.T) {
+	stats := &ProcessingStats{}
+
+	stats.AddSuccessful(10)
+	stats.AddSuccessful(20)
+	stats.AddSuccessful(30)
+
+	if stats.SuccessfulDeletes != 60 {
+		t.Errorf("expected 60 successful, got %d", stats.SuccessfulDeletes)
+	}
+}
+
+func TestProcessingStats_AddFailed(t *testing.T) {
+	stats := &ProcessingStats{}
+
+	stats.AddFailed(5)
+
+	if stats.FailedDeletes != 5 {
+		t.Errorf("expected 5 failed, got %d", stats.FailedDeletes)
+	}
+}
+
+func TestProcessingStats_AddFailed_Multiple(t *testing.T) {
+	stats := &ProcessingStats{}
+
+	stats.AddFailed(5)
+	stats.AddFailed(10)
+	stats.AddFailed(15)
+
+	if stats.FailedDeletes != 30 {
+		t.Errorf("expected 30 failed, got %d", stats.FailedDeletes)
+	}
+}
+
+func TestProcessingStats_IncrementProcessedChunks(t *testing.T) {
+	stats := &ProcessingStats{}
+
+	stats.IncrementProcessedChunks()
+
+	if stats.ProcessedChunks != 1 {
+		t.Errorf("expected 1 processed chunk, got %d", stats.ProcessedChunks)
+	}
+}
+
+func TestProcessingStats_IncrementProcessedChunks_Multiple(t *testing.T) {
+	stats := &ProcessingStats{}
+
+	stats.IncrementProcessedChunks()
+	stats.IncrementProcessedChunks()
+	stats.IncrementProcessedChunks()
+
+	if stats.ProcessedChunks != 3 {
+		t.Errorf("expected 3 processed chunks, got %d", stats.ProcessedChunks)
+	}
+}
+
+func TestProcessingStats_MixedOperations(t *testing.T) {
+	stats := &ProcessingStats{}
+
+	stats.AddSuccessful(10)
+	stats.AddFailed(5)
+	stats.IncrementProcessedChunks()
+
+	stats.AddSuccessful(20)
+	stats.AddFailed(10)
+	stats.IncrementProcessedChunks()
+
+	if stats.SuccessfulDeletes != 30 {
+		t.Errorf("expected 30 successful, got %d", stats.SuccessfulDeletes)
+	}
+	if stats.FailedDeletes != 15 {
+		t.Errorf("expected 15 failed, got %d", stats.FailedDeletes)
+	}
+	if stats.ProcessedChunks != 2 {
+		t.Errorf("expected 2 processed chunks, got %d", stats.ProcessedChunks)
+	}
+}
