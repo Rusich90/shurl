@@ -995,7 +995,7 @@ func TestFileURLRepository_SaveBatch_Conflict(t *testing.T) {
 	// Пытаемся сохранить пакет с конфликтом
 	rows := []domainurl.URL{
 		{
-			ShortURL:    "test1",  // Конфликт!
+			ShortURL:    "test1", // Конфликт!
 			OriginalURL: "https://example.com/2",
 			UserID:      &userID,
 		},
@@ -1094,4 +1094,3 @@ func TestFileURLRepository_SaveBatch_ContextCancelled(t *testing.T) {
 		}
 	}
 }
-

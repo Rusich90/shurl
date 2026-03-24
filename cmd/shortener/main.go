@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
+	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
 
+	"github.com/Rusich90/shurl.git/internal/audit"
 	"github.com/Rusich90/shurl.git/internal/config"
+	"github.com/Rusich90/shurl.git/internal/repository"
 	"github.com/Rusich90/shurl.git/internal/server"
 )
 
@@ -23,12 +26,28 @@ var buildCommit string
 func main() {
 	cfg := config.InitConfig()
 
-	r, urlRepo, auditManager, err := server.SetupServer(cfg)
+	// Инициализация репозитория URL
+	urlRepo, _, err := repository.NewURLRepository(cfg)
 	if err != nil {
-		log.Fatalf("Failed to setup server: %v", err)
+		log.Fatalf("Failed to initialize URL repository: %v", err)
 	}
 	defer urlRepo.Close()
-	defer auditManager.Close()
+
+	// Инициализация логгера
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Fatalf("Failed to create logger: %v", err)
+	}
+	defer logger.Sync()
+
+	// Инициализация менеджера аудита
+	auditManager, err := audit.NewManagerWithConfig(cfg, logger)
+	if err != nil {
+		log.Fatalf("Failed to initialize audit manager: %v", err)
+	}
+
+	// Настройка HTTP-сервера
+	r := server.SetupServer(cfg, urlRepo, auditManager, logger)
 
 	printBuildInfo()
 
@@ -38,12 +57,17 @@ func main() {
 		Handler: r,
 	}
 
-	// Канал для получения сигналов
-	shutdownChan := make(chan os.Signal, 1)
-	signal.Notify(shutdownChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	// Создаем контекст для graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer stop()
+
+	// WaitGroup для ожидания завершения горутины сервера
+	var wg sync.WaitGroup
 
 	// Запуск сервера в отдельной горутине
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		if cfg.EnableHTTPS {
 			log.Printf("Starting HTTPS server on %s\n", cfg.ServerAddress)
 			// Используем autocert для автоматического получения сертификатов Let's Encrypt
@@ -66,21 +90,35 @@ func main() {
 	}()
 
 	// Ожидание сигнала для завершения
-	sig := <-shutdownChan
-	log.Printf("Received signal %v, starting graceful shutdown...\n", sig)
+	<-ctx.Done()
+	log.Printf("Received shutdown signal, starting graceful shutdown...\n")
 
 	// Создаем контекст с таймаутом для завершения
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// Запрашиваем корректное завершение работы сервера
-	if err := httpServer.Shutdown(ctx); err != nil {
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Printf("Server forced to shutdown: %v", err)
 		// Принудительное завершение через 5 секунд
 		<-time.After(5 * time.Second)
 	}
 
+	// Ждем завершения горутины сервера
+	wg.Wait()
 	log.Println("Server gracefully stopped")
+
+	// Закрываем соединение с БД
+	log.Println("Closing database connection...")
+	if err := urlRepo.Close(); err != nil {
+		log.Printf("Error closing URL repository: %v", err)
+	}
+
+	// Закрываем audit manager
+	log.Println("Closing audit manager...")
+	auditManager.Close()
+
+	log.Println("All resources closed successfully")
 }
 
 func printBuildInfo() {

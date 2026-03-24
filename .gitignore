@@ -25,6 +25,7 @@ vendor/
 file_storage.jsonl
 
 .env
+config.json
 
 cmd/bulk_insert
 audit.log
