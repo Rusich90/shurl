@@ -81,6 +81,14 @@ func (m *MockURLRepository) Ping(ctx context.Context) error {
 	return m.pingError
 }
 
+func (m *MockURLRepository) CountURLs(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
+func (m *MockURLRepository) CountUsers(ctx context.Context) (int, error) {
+	return 0, nil
+}
+
 func TestPing_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

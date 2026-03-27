@@ -188,3 +188,38 @@ func (r *FileURLRepository) Close() error {
 func (r *FileURLRepository) Ping(ctx context.Context) error {
 	return nil
 }
+
+// CountURLs возвращает количество URL в хранилище.
+func (r *FileURLRepository) CountURLs(ctx context.Context) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	default:
+	}
+
+	return len(r.urls), nil
+}
+
+// CountUsers возвращает количество уникальных пользователей в хранилище.
+func (r *FileURLRepository) CountUsers(ctx context.Context) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	default:
+	}
+
+	users := make(map[uuid.UUID]struct{})
+	for _, url := range r.urls {
+		if url.UserID != nil {
+			users[*url.UserID] = struct{}{}
+		}
+	}
+
+	return len(users), nil
+}

@@ -186,3 +186,25 @@ func (r *DBURLRepository) Close() error {
 func (r *DBURLRepository) Ping(ctx context.Context) error {
 	return r.db.PingContext(ctx)
 }
+
+// CountURLs возвращает количество URL в хранилище.
+func (r *DBURLRepository) CountURLs(ctx context.Context) (int, error) {
+	query := `SELECT COUNT(*) FROM urls`
+	var count int
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count URLs: %w", err)
+	}
+	return count, nil
+}
+
+// CountUsers возвращает количество уникальных пользователей в хранилище.
+func (r *DBURLRepository) CountUsers(ctx context.Context) (int, error) {
+	query := `SELECT COUNT(DISTINCT user_id) FROM urls WHERE user_id IS NOT NULL`
+	var count int
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count users: %w", err)
+	}
+	return count, nil
+}

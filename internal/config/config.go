@@ -39,6 +39,8 @@ type Config struct {
 	AuditURL string `json:"audit_url,omitempty"`
 	// EnableHTTPS — флаг для включения HTTPS.
 	EnableHTTPS bool `json:"enable_https"`
+	// TrustedSubnet — доверенная подсеть в формате CIDR для доступа к /api/internal/stats.
+	TrustedSubnet string `json:"trusted_subnet,omitempty"`
 }
 
 // InitConfig инициализирует конфигурацию из флагов командной строки, переменных окружения
@@ -55,12 +57,13 @@ type Config struct {
 //	--audit-file      Путь к файлу аудит-логов
 //	--audit-url       URL для аудит-логов
 //	--enable-https     Включение HTTPS (по умолчанию: false)
+//	-t, --trusted-subnet Доверенная подсеть в формате CIDR для доступа к /api/internal/stats
 //	-c, --config      Путь к файлу конфигурации JSON
 //
 // Поддерживаемые переменные окружения:
 //
 //	SERVER_ADDRESS, BASE_URL, FILE_STORAGE_PATH, DATABASE_DSN, MIGRATIONS_PATH,
-//	AUTH_SECRET, AUDIT_FILE, AUDIT_URL, ENABLE_HTTPS, CONFIG
+//	AUTH_SECRET, AUDIT_FILE, AUDIT_URL, ENABLE_HTTPS, TRUSTED_SUBNET, CONFIG
 //
 // Пример использования:
 //
@@ -83,6 +86,7 @@ func InitConfig() *Config {
 		AuditFile:       "",
 		AuditURL:        "",
 		EnableHTTPS:     false,
+		TrustedSubnet:   "",
 	}
 
 	// Сначала загружаем конфигурацию из файла (самый низкий приоритет)
@@ -120,6 +124,7 @@ func InitConfig() *Config {
 	cfgFlagSet.StringVar(&config.AuditFile, "audit-file", "", "Path to audit log file")
 	cfgFlagSet.StringVar(&config.AuditURL, "audit-url", "", "URL for audit log service")
 	cfgFlagSet.BoolVar(&config.EnableHTTPS, "enable-https", false, "Enable HTTPS")
+	cfgFlagSet.StringVar(&config.TrustedSubnet, "t", "", "Trusted subnet in CIDR format")
 
 	// Пытаемся распарсить флаги, игнорируя ошибки (например, флаги тестирования)
 	_ = cfgFlagSet.Parse(os.Args[1:])
@@ -154,6 +159,9 @@ func InitConfig() *Config {
 	}
 	if envEnableHTTPS, exists := os.LookupEnv("ENABLE_HTTPS"); exists {
 		config.EnableHTTPS = envEnableHTTPS == "true"
+	}
+	if envTrustedSubnet, exists := os.LookupEnv("TRUSTED_SUBNET"); exists {
+		config.TrustedSubnet = envTrustedSubnet
 	}
 
 	return config
@@ -207,6 +215,9 @@ func loadConfigFromFile(filePath string, config *Config) error {
 	}
 	if val, ok := dataMap["enable_https"].(bool); ok {
 		config.EnableHTTPS = val
+	}
+	if val, ok := dataMap["trusted_subnet"].(string); ok && val != "" {
+		config.TrustedSubnet = val
 	}
 
 	return nil

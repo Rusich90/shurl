@@ -70,3 +70,11 @@ type UserURLsResponse []URLResponse
 
 // DeleteURLsRequest представляет запрос на удаление URL.
 type DeleteURLsRequest []string
+
+// StatsResponse представляет ответ со статистикой сервиса.
+type StatsResponse struct {
+	// URLs — количество сокращённых URL в сервисе.
+	URLs int `json:"urls"`
+	// Users — количество пользователей в сервисе.
+	Users int `json:"users"`
+}
