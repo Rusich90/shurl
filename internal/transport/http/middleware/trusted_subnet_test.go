@@ -139,11 +139,11 @@ func TestTrustedSubnetMiddleware_DifferentCIDRFormats(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	testCases := []struct {
-		name          string
-		cidr          string
-		ip            string
-		expected      int
-		description   string
+		name        string
+		cidr        string
+		ip          string
+		expected    int
+		description string
 	}{
 		{
 			name:        "IPv4 /24 subnet",
