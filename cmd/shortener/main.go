@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/Rusich90/shurl.git/internal/config"
-	"github.com/Rusich90/shurl.git/internal/server"
+	"go.uber.org/zap"
+
+	"github.com/Rusich90/shurl.git/internal/app"
 )
 
 var buildVersion string
@@ -13,19 +17,21 @@ var buildDate string
 var buildCommit string
 
 func main() {
-	cfg := config.InitConfig()
-
-	r, urlRepo, err := server.SetupServer(cfg)
+	application, err := app.NewApp()
 	if err != nil {
-		log.Fatalf("Failed to setup server: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to initialize application: %v\n", err)
+		os.Exit(1)
 	}
-	defer urlRepo.Close()
 
 	printBuildInfo()
 
-	log.Printf("Starting server on %s\n", cfg.ServerAddress)
-	if err := r.Run(cfg.ServerAddress); err != nil {
-		log.Fatalf("Server failed to start: %v\n", err)
+	// Создаем контекст для graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer stop()
+
+	if err := application.Run(ctx); err != nil {
+		application.Logger().Error("Application error", zap.Error(err))
+		os.Exit(1)
 	}
 }
 

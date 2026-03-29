@@ -11,6 +11,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// Close закрывает все наблюдатели, которые поддерживают закрытие.
+func (am *Manager) Close() {
+	for _, observer := range am.observers {
+		if closer, ok := observer.(Closer); ok {
+			closer.Close()
+		}
+	}
+}
+
 // Manager управляет коллекцией наблюдателей аудит-событий.
 //
 // Позволяет регистрировать новые наблюдатели и уведомлять их обо всех событиях.

@@ -1,0 +1,11 @@
+{
+  "server_address": "localhost:8080",
+  "base_url": "http://localhost:8080",
+  "file_storage_path": "file_storage.jsonl",
+  "database_dsn": "",
+  "migrations_path": "file://migrations",
+  "auth_secret": "default_secret_key",
+  "audit_file": "",
+  "audit_url": "",
+  "enable_https": false
+}

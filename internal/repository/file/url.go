@@ -2,7 +2,6 @@ package file
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -17,11 +16,48 @@ type FileURLRepository struct {
 }
 
 func (r *FileURLRepository) DeleteURLs(ctx context.Context, IDs []string, userID *uuid.UUID) error {
-	return errors.New("not yet implemented")
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	for _, id := range IDs {
+		url, exists := r.urls[id]
+		if exists {
+			url.IsDeleted = true
+			r.urls[id] = url
+			err := r.fileStorage.SaveRow(url)
+			if err != nil {
+				return fmt.Errorf("failed to save deleted URL %s: %w", id, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *FileURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
-	return nil, errors.New("not yet implemented")
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	var result []domainurl.URL
+	for _, url := range r.urls {
+		if url.UserID != nil && userID != nil && *url.UserID == *userID && !url.IsDeleted {
+			result = append(result, url)
+		}
+	}
+
+	return result, nil
 }
 
 func NewFileURLRepository(fileStorage FileStorage) (*FileURLRepository, error) {

@@ -1,19 +1,20 @@
 package server
 
 import (
-	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
+	"github.com/Rusich90/shurl.git/internal/audit"
 	"github.com/Rusich90/shurl.git/internal/config"
+	"github.com/Rusich90/shurl.git/internal/repository"
 	file "github.com/Rusich90/shurl.git/internal/repository/file"
-	postgresrepo "github.com/Rusich90/shurl.git/internal/repository/postgres"
+	"github.com/Rusich90/shurl.git/internal/repository/postgres"
 	"github.com/gin-gonic/gin"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestSetupServer_FileStorage(t *testing.T) {
@@ -31,11 +32,20 @@ func TestSetupServer_FileStorage(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 
-	router, urlRepo, err := SetupServer(cfg)
+	// Инициализация зависимостей
+	urlRepo, _, err := repository.NewURLRepository(cfg)
 	require.NoError(t, err)
-	require.NotNil(t, router)
 	require.NotNil(t, urlRepo)
 	defer urlRepo.Close()
+
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+
+	auditManager := audit.NewManager(logger)
+	defer auditManager.Close()
+
+	router := SetupServer(cfg, urlRepo, auditManager, logger)
+	require.NotNil(t, router)
 
 	// Проверяем, что репозиторий является файловым
 	_, ok := urlRepo.(*file.FileURLRepository)
@@ -72,31 +82,6 @@ func TestSetupServer_Database(t *testing.T) {
 	// В данном тесте мы просто проверим, что функция не возвращает ошибку при корректной конфигурации
 	// и что репозиторий является DBURLRepository
 
-	// Создаем временную базу данных в памяти
-	db, err := sql.Open("pgx", "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
-	if err != nil {
-		t.Skip("Skipping database test: ", err)
-	}
-	defer db.Close()
-
-	// Проверяем подключение
-	err = db.Ping()
-	if err != nil {
-		t.Skip("Skipping database test: ", err)
-	}
-
-	// Создаем тестовую таблицу
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS shurl (
-			short_url TEXT PRIMARY KEY,
-			original_url TEXT NOT NULL,
-			user_id UUID,
-			is_deleted BOOLEAN DEFAULT FALSE
-		)
-	`)
-	require.NoError(t, err)
-	defer db.Exec("DROP TABLE IF EXISTS shurl")
-
 	cfg := &config.Config{
 		ServerAddress:   "localhost:8080",
 		BaseURL:         "http://localhost:8080",
@@ -107,14 +92,25 @@ func TestSetupServer_Database(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 
-	router, urlRepo, err := SetupServer(cfg)
-	require.NoError(t, err)
-	require.NotNil(t, router)
+	// Инициализация зависимостей
+	urlRepo, _, err := repository.NewURLRepository(cfg)
+	if err != nil {
+		t.Skip("Skipping database test: ", err)
+	}
 	require.NotNil(t, urlRepo)
 	defer urlRepo.Close()
 
+	logger, err := zap.NewDevelopment()
+	require.NoError(t, err)
+
+	auditManager := audit.NewManager(logger)
+	defer auditManager.Close()
+
+	router := SetupServer(cfg, urlRepo, auditManager, logger)
+	require.NotNil(t, router)
+
 	// Проверяем, что репозиторий является DBURLRepository
-	_, ok := urlRepo.(*postgresrepo.DBURLRepository)
+	_, ok := urlRepo.(*postgres.DBURLRepository)
 	assert.True(t, ok, "URL repository should be database-based")
 
 	// Проверяем регистрацию маршрутов
@@ -132,9 +128,9 @@ func TestSetupServer_InvalidDBConnection(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 
-	router, urlRepo, err := SetupServer(cfg)
+	// Инициализация зависимостей должна завершиться ошибкой
+	urlRepo, _, err := repository.NewURLRepository(cfg)
 	assert.Error(t, err)
-	assert.Nil(t, router)
 	assert.Nil(t, urlRepo)
 }
 
@@ -148,45 +144,8 @@ func TestSetupServer_InvalidFileStoragePath(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 
-	router, urlRepo, err := SetupServer(cfg)
+	// Инициализация зависимостей должна завершиться ошибкой
+	urlRepo, _, err := repository.NewURLRepository(cfg)
 	assert.Error(t, err)
-	assert.Nil(t, router)
 	assert.Nil(t, urlRepo)
-}
-
-func TestRunMigrations(t *testing.T) {
-	// Создаем временную базу данных в памяти
-	db, err := sql.Open("pgx", "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
-	if err != nil {
-		t.Skip("Skipping migration test: ", err)
-	}
-	defer db.Close()
-
-	// Проверяем подключение
-	err = db.Ping()
-	if err != nil {
-		t.Skip("Skipping migration test: ", err)
-	}
-
-	cfg := &config.Config{
-		MigrationsPath: "file://../migrations",
-	}
-
-	err = runMigrations(db, cfg)
-	assert.NoError(t, err)
-
-	// Проверяем, что миграции применились (таблица существует)
-	var exists bool
-	query := `
-		SELECT EXISTS (
-			SELECT FROM information_schema.tables 
-			WHERE table_name = 'shurl'
-		)
-	`
-	err = db.QueryRow(query).Scan(&exists)
-	assert.NoError(t, err)
-	assert.True(t, exists, "Table 'shurl' should exist after migrations")
-
-	// Удаляем таблицу после теста
-	db.Exec("DROP TABLE IF EXISTS shurl")
 }

@@ -9,7 +9,7 @@ ifndef DATABASE_DSN
 endif
 
 build:
-	cd cmd/shortener && go build -o shortener *.go
+	cd cmd/shortener && go build -o shortener main.go
 
 test:
 	SERVER_PORT=8888 shortenertest -test.v -test.run=^TestIteration4$$ -binary-path=cmd/shortener/shortener -server-port=$SERVER_PORT
@@ -25,7 +25,7 @@ show-test-cov:
 	go tool cover -html=coverage.out
 
 run:
-	go run cmd/shortener/*.go
+	go run cmd/shortener/main.go
 
 migrate-up: check-database-dsn
 	@echo "Applying migrations"
