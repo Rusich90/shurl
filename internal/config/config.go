@@ -23,6 +23,8 @@ import (
 type Config struct {
 	// ServerAddress — адрес HTTP-сервера в формате "host:port".
 	ServerAddress string `json:"server_address"`
+	// GRPCServerAddress — адрес gRPC-сервера в формате "host:port".
+	GRPCServerAddress string `json:"grpc_server_address,omitempty"`
 	// BaseURL — базовый URL для генерации коротких ссылок.
 	BaseURL string `json:"base_url"`
 	// FileStoragePath — путь к файлу для хранения URL (используется при отключенной БД).
@@ -39,6 +41,8 @@ type Config struct {
 	AuditURL string `json:"audit_url,omitempty"`
 	// EnableHTTPS — флаг для включения HTTPS.
 	EnableHTTPS bool `json:"enable_https"`
+	// TrustedSubnet — доверенная подсеть в формате CIDR для доступа к /api/internal/stats.
+	TrustedSubnet string `json:"trusted_subnet,omitempty"`
 }
 
 // InitConfig инициализирует конфигурацию из флагов командной строки, переменных окружения
@@ -55,12 +59,13 @@ type Config struct {
 //	--audit-file      Путь к файлу аудит-логов
 //	--audit-url       URL для аудит-логов
 //	--enable-https     Включение HTTPS (по умолчанию: false)
+//	-t, --trusted-subnet Доверенная подсеть в формате CIDR для доступа к /api/internal/stats
 //	-c, --config      Путь к файлу конфигурации JSON
 //
 // Поддерживаемые переменные окружения:
 //
 //	SERVER_ADDRESS, BASE_URL, FILE_STORAGE_PATH, DATABASE_DSN, MIGRATIONS_PATH,
-//	AUTH_SECRET, AUDIT_FILE, AUDIT_URL, ENABLE_HTTPS, CONFIG
+//	AUTH_SECRET, AUDIT_FILE, AUDIT_URL, ENABLE_HTTPS, TRUSTED_SUBNET, CONFIG
 //
 // Пример использования:
 //
@@ -74,15 +79,17 @@ func InitConfig() *Config {
 	_ = godotenv.Load()
 
 	config := &Config{
-		ServerAddress:   "localhost:8080",
-		BaseURL:         "http://localhost:8080",
-		FileStoragePath: "file_storage.jsonl",
-		DatabaseDSN:     "",
-		MigrationsPath:  "file://migrations",
-		AuthSecret:      "default_secret_key",
-		AuditFile:       "",
-		AuditURL:        "",
-		EnableHTTPS:     false,
+		ServerAddress:     "localhost:8080",
+		GRPCServerAddress: "localhost:9090",
+		BaseURL:           "http://localhost:8080",
+		FileStoragePath:   "file_storage.jsonl",
+		DatabaseDSN:       "",
+		MigrationsPath:    "file://migrations",
+		AuthSecret:        "default_secret_key",
+		AuditFile:         "",
+		AuditURL:          "",
+		EnableHTTPS:       false,
+		TrustedSubnet:     "",
 	}
 
 	// Сначала загружаем конфигурацию из файла (самый низкий приоритет)
@@ -112,6 +119,7 @@ func InitConfig() *Config {
 	cfgFlagSet := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	cfgFlagSet.SetOutput(nil) // Отключаем вывод сообщений об ошибках
 	cfgFlagSet.StringVar(&config.ServerAddress, "a", "localhost:8080", "HTTP server address")
+	cfgFlagSet.StringVar(&config.GRPCServerAddress, "g", "localhost:9090", "gRPC server address")
 	cfgFlagSet.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened URLs")
 	cfgFlagSet.StringVar(&config.FileStoragePath, "f", "file_storage.jsonl", "Path to file storage")
 	cfgFlagSet.StringVar(&config.DatabaseDSN, "d", "", "Database DSN (if not set, file storage will be used)")
@@ -120,6 +128,7 @@ func InitConfig() *Config {
 	cfgFlagSet.StringVar(&config.AuditFile, "audit-file", "", "Path to audit log file")
 	cfgFlagSet.StringVar(&config.AuditURL, "audit-url", "", "URL for audit log service")
 	cfgFlagSet.BoolVar(&config.EnableHTTPS, "enable-https", false, "Enable HTTPS")
+	cfgFlagSet.StringVar(&config.TrustedSubnet, "t", "", "Trusted subnet in CIDR format")
 
 	// Пытаемся распарсить флаги, игнорируя ошибки (например, флаги тестирования)
 	_ = cfgFlagSet.Parse(os.Args[1:])
@@ -130,6 +139,9 @@ func InitConfig() *Config {
 	// Применяем значения из переменных окружения (самый высокий приоритет)
 	if envServAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
 		config.ServerAddress = envServAddr
+	}
+	if envGRPCServAddr, exists := os.LookupEnv("GRPC_SERVER_ADDRESS"); exists {
+		config.GRPCServerAddress = envGRPCServAddr
 	}
 	if envBaseURL, exists := os.LookupEnv("BASE_URL"); exists {
 		config.BaseURL = envBaseURL
@@ -154,6 +166,9 @@ func InitConfig() *Config {
 	}
 	if envEnableHTTPS, exists := os.LookupEnv("ENABLE_HTTPS"); exists {
 		config.EnableHTTPS = envEnableHTTPS == "true"
+	}
+	if envTrustedSubnet, exists := os.LookupEnv("TRUSTED_SUBNET"); exists {
+		config.TrustedSubnet = envTrustedSubnet
 	}
 
 	return config
@@ -184,6 +199,9 @@ func loadConfigFromFile(filePath string, config *Config) error {
 	if val, ok := dataMap["server_address"].(string); ok && val != "" {
 		config.ServerAddress = val
 	}
+	if val, ok := dataMap["grpc_server_address"].(string); ok && val != "" {
+		config.GRPCServerAddress = val
+	}
 	if val, ok := dataMap["base_url"].(string); ok && val != "" {
 		config.BaseURL = val
 	}
@@ -207,6 +225,9 @@ func loadConfigFromFile(filePath string, config *Config) error {
 	}
 	if val, ok := dataMap["enable_https"].(bool); ok {
 		config.EnableHTTPS = val
+	}
+	if val, ok := dataMap["trusted_subnet"].(string); ok && val != "" {
+		config.TrustedSubnet = val
 	}
 
 	return nil
