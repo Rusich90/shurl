@@ -26,6 +26,7 @@
 | `--audit-file` | `AUDIT_FILE` | Путь к файлу аудит-логов | (пусто) |
 | `--audit-url` | `AUDIT_URL` | URL для аудит-логов | (пусто) |
 | `--enable-https` | `ENABLE_HTTPS` | Включение HTTPS | `false` |
+| `-t` | `TRUSTED_SUBNET` | Доверенная подсеть в формате CIDR для доступа к /api/internal/stats | (пусто) |
 | `-c` | `CONFIG` | Путь к файлу конфигурации JSON | (пусто) |
 
 ### Файл конфигурации
@@ -42,8 +43,38 @@
     "auth_secret": "secret_key",
     "audit_file": "/path/to/audit.log",
     "audit_url": "http://audit.example.com",
-    "enable_https": true
+    "enable_https": true,
+    "trusted_subnet": "192.168.1.0/24"
 }
+```
+
+### Доверенная подсеть (Trusted Subnet)
+
+Параметр `trusted_subnet` используется для ограничения доступа к эндпоинту `/api/internal/stats`.
+
+- **Формат**: CIDR (например, `192.168.1.0/24`, `10.0.0.0/8`)
+- **Проверка**: IP-адрес клиента берётся из заголовка `X-Real-IP`
+- **Поведение**:
+  - Если `trusted_subnet` не задан (пустой), доступ к `/api/internal/stats` запрещён для всех запросов (403 Forbidden)
+  - Если `trusted_subnet` задан, доступ разрешён только для IP-адресов из указанной подсети
+  - Если заголовок `X-Real-IP` отсутствует или IP-адрес не входит в подсеть, возвращается 403 Forbidden
+
+**Примеры использования**:
+
+```bash
+# Разрешить доступ только из подсети 192.168.1.0/24
+./shortener -t 192.168.1.0/24
+
+# Через переменную окружения
+export TRUSTED_SUBNET=10.0.0.0/8
+./shortener
+
+# Через файл конфигурации
+# config.json:
+# {
+#   "trusted_subnet": "172.16.0.0/12"
+# }
+./shortener -c config.json
 ```
 
 ### Пример использования

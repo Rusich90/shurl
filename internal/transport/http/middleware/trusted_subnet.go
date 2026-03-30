@@ -1,0 +1,79 @@
+// Package middleware предоставляет функции-обработчики Gin middleware.
+//
+// Содержит middleware для логирования, сжатия и аутентификации запросов.
+package middleware
+
+import (
+	"net"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+)
+
+// TrustedSubnetMiddleware проверяет, что IP-адрес клиента из заголовка X-Real-IP
+// входит в доверенную подсеть, указанную в формате CIDR.
+//
+// Если trusted_subnet пустой, доступ запрещён для любого запроса.
+// Если IP-адрес не входит в доверенную подсеть, возвращается статус 403 Forbidden.
+func TrustedSubnetMiddleware(trustedSubnet string, logger *zap.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Если доверенная подсеть не задана, запрещаем доступ
+		if trustedSubnet == "" {
+			logger.Warn("Access denied: trusted subnet is not configured",
+				zap.String("path", c.Request.URL.Path),
+				zap.String("method", c.Request.Method),
+			)
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
+		// Получаем IP-адрес из заголовка X-Real-IP
+		clientIP := c.GetHeader("X-Real-IP")
+		if clientIP == "" {
+			logger.Warn("Access denied: X-Real-IP header is missing",
+				zap.String("path", c.Request.URL.Path),
+				zap.String("method", c.Request.Method),
+			)
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
+		// Парсим доверенную подсеть
+		_, ipNet, err := net.ParseCIDR(trustedSubnet)
+		if err != nil {
+			logger.Error("Failed to parse trusted subnet CIDR",
+				zap.String("trusted_subnet", trustedSubnet),
+				zap.Error(err),
+			)
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
+		// Парсим IP-адрес клиента
+		clientAddr := net.ParseIP(clientIP)
+		if clientAddr == nil {
+			logger.Warn("Access denied: invalid client IP address",
+				zap.String("client_ip", clientIP),
+				zap.String("path", c.Request.URL.Path),
+				zap.String("method", c.Request.Method),
+			)
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
+		// Проверяем, что IP-адрес клиента входит в доверенную подсеть
+		if !ipNet.Contains(clientAddr) {
+			logger.Warn("Access denied: client IP is not in trusted subnet",
+				zap.String("client_ip", clientIP),
+				zap.String("trusted_subnet", trustedSubnet),
+				zap.String("path", c.Request.URL.Path),
+				zap.String("method", c.Request.Method),
+			)
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
+		c.Next()
+	}
+}

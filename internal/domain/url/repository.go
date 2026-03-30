@@ -35,4 +35,10 @@ type URLRepository interface {
 
 	// Ping проверяет доступность хранилища.
 	Ping(ctx context.Context) error
+
+	// CountURLs возвращает количество URL в хранилище.
+	CountURLs(ctx context.Context) (int, error)
+
+	// CountUsers возвращает количество уникальных пользователей в хранилище.
+	CountUsers(ctx context.Context) (int, error)
 }

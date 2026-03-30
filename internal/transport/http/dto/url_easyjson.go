@@ -830,3 +830,80 @@ func (v *BatchURLResponseItem) UnmarshalJSON(data []byte) error {
 func (v *BatchURLResponseItem) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalTransportHttpDto10(l, v)
 }
+
+func easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalTransportHttpDto11(in *jlexer.Lexer, out *StatsResponse) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "urls":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.URLs = int(in.Int())
+			}
+		case "users":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Users = int(in.Int())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalTransportHttpDto11(out *jwriter.Writer, in StatsResponse) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"urls\":"
+		out.RawString(prefix[1:])
+		out.Int(int(in.URLs))
+	}
+	{
+		const prefix string = ",\"users\":"
+		out.RawString(prefix)
+		out.Int(int(in.Users))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v StatsResponse) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalTransportHttpDto11(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v StatsResponse) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonF48b0fb9EncodeGithubComRusich90ShurlGitInternalTransportHttpDto11(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *StatsResponse) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalTransportHttpDto11(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *StatsResponse) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonF48b0fb9DecodeGithubComRusich90ShurlGitInternalTransportHttpDto11(l, v)
+}
