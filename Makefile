@@ -49,4 +49,10 @@ endif
 gen-json:
 	cd internal/transport/http && easyjson -all dto/url.go
 
-.PHONY: build test run
+gen-proto:
+	@echo "Generating protobuf files..."
+	protoc --go_out=. --go_opt=module=github.com/Rusich90/shurl.git \
+		--go-grpc_out=. --go-grpc_opt=module=github.com/Rusich90/shurl.git \
+		--go_opt=default_api_level=API_OPAQUE api/shortener.proto
+
+.PHONY: build test run gen-proto

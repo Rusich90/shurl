@@ -23,6 +23,8 @@ import (
 type Config struct {
 	// ServerAddress — адрес HTTP-сервера в формате "host:port".
 	ServerAddress string `json:"server_address"`
+	// GRPCServerAddress — адрес gRPC-сервера в формате "host:port".
+	GRPCServerAddress string `json:"grpc_server_address,omitempty"`
 	// BaseURL — базовый URL для генерации коротких ссылок.
 	BaseURL string `json:"base_url"`
 	// FileStoragePath — путь к файлу для хранения URL (используется при отключенной БД).
@@ -77,16 +79,17 @@ func InitConfig() *Config {
 	_ = godotenv.Load()
 
 	config := &Config{
-		ServerAddress:   "localhost:8080",
-		BaseURL:         "http://localhost:8080",
-		FileStoragePath: "file_storage.jsonl",
-		DatabaseDSN:     "",
-		MigrationsPath:  "file://migrations",
-		AuthSecret:      "default_secret_key",
-		AuditFile:       "",
-		AuditURL:        "",
-		EnableHTTPS:     false,
-		TrustedSubnet:   "",
+		ServerAddress:     "localhost:8080",
+		GRPCServerAddress: "localhost:9090",
+		BaseURL:           "http://localhost:8080",
+		FileStoragePath:   "file_storage.jsonl",
+		DatabaseDSN:       "",
+		MigrationsPath:    "file://migrations",
+		AuthSecret:        "default_secret_key",
+		AuditFile:         "",
+		AuditURL:          "",
+		EnableHTTPS:       false,
+		TrustedSubnet:     "",
 	}
 
 	// Сначала загружаем конфигурацию из файла (самый низкий приоритет)
@@ -116,6 +119,7 @@ func InitConfig() *Config {
 	cfgFlagSet := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	cfgFlagSet.SetOutput(nil) // Отключаем вывод сообщений об ошибках
 	cfgFlagSet.StringVar(&config.ServerAddress, "a", "localhost:8080", "HTTP server address")
+	cfgFlagSet.StringVar(&config.GRPCServerAddress, "g", "localhost:9090", "gRPC server address")
 	cfgFlagSet.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened URLs")
 	cfgFlagSet.StringVar(&config.FileStoragePath, "f", "file_storage.jsonl", "Path to file storage")
 	cfgFlagSet.StringVar(&config.DatabaseDSN, "d", "", "Database DSN (if not set, file storage will be used)")
@@ -135,6 +139,9 @@ func InitConfig() *Config {
 	// Применяем значения из переменных окружения (самый высокий приоритет)
 	if envServAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
 		config.ServerAddress = envServAddr
+	}
+	if envGRPCServAddr, exists := os.LookupEnv("GRPC_SERVER_ADDRESS"); exists {
+		config.GRPCServerAddress = envGRPCServAddr
 	}
 	if envBaseURL, exists := os.LookupEnv("BASE_URL"); exists {
 		config.BaseURL = envBaseURL
@@ -191,6 +198,9 @@ func loadConfigFromFile(filePath string, config *Config) error {
 	// Применяем значения из файла, если они заданы
 	if val, ok := dataMap["server_address"].(string); ok && val != "" {
 		config.ServerAddress = val
+	}
+	if val, ok := dataMap["grpc_server_address"].(string); ok && val != "" {
+		config.GRPCServerAddress = val
 	}
 	if val, ok := dataMap["base_url"].(string); ok && val != "" {
 		config.BaseURL = val

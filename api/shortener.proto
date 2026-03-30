@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package shortener.v1;
+
+option go_package = "github.com/Rusich90/shurl.git/pkg";
+
+import "google/protobuf/empty.proto";
+
+// ShortenerService предоставляет методы для работы с короткими URL
+service ShortenerService {
+  // ShortenURL создает короткую ссылку для указанного URL
+  rpc ShortenURL (URLShortenRequest) returns (URLShortenResponse);
+  
+  // ExpandURL возвращает исходный URL по короткому идентификатору
+  rpc ExpandURL (URLExpandRequest) returns (URLExpandResponse);
+  
+  // ListUserURLs возвращает все URL пользователя
+  rpc ListUserURLs (google.protobuf.Empty) returns (UserURLsResponse);
+}
+
+// URLShortenRequest - запрос на создание короткой ссылки
+message URLShortenRequest {
+  string url = 1;
+}
+
+// URLShortenResponse - ответ с короткой ссылкой
+message URLShortenResponse {
+  string result = 1;
+}
+
+// URLExpandRequest - запрос на получение исходного URL
+message URLExpandRequest {
+  string id = 1;
+}
+
+// URLExpandResponse - ответ с исходным URL
+message URLExpandResponse {
+  string result = 1;
+}
+
+// UserURLsResponse - ответ со списком URL пользователя
+message UserURLsResponse {
+  repeated URLData url = 1;
+}
+
+// URLData - данные о короткой ссылке
+message URLData {
+  string short_url = 1;
+  string original_url = 2;
+}

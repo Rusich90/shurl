@@ -3,12 +3,14 @@ package app
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
 
 	"github.com/Rusich90/shurl.git/internal/audit"
 	"github.com/Rusich90/shurl.git/internal/config"
@@ -24,6 +26,8 @@ type App struct {
 	urlRepo      domain.URLRepository
 	auditManager *audit.Manager
 	httpServer   *http.Server
+	grpcServer   *grpc.Server
+	grpcListener net.Listener
 }
 
 // NewApp создает новое приложение
@@ -48,6 +52,10 @@ func NewApp() (*App, error) {
 
 	if err := app.initHTTPServer(); err != nil {
 		return nil, fmt.Errorf("failed to init HTTP server: %w", err)
+	}
+
+	if err := app.initGRPCServer(); err != nil {
+		return nil, fmt.Errorf("failed to init gRPC server: %w", err)
 	}
 
 	return app, nil
@@ -100,24 +108,46 @@ func (a *App) initHTTPServer() error {
 	return nil
 }
 
+// initGRPCServer инициализирует gRPC-сервер
+func (a *App) initGRPCServer() error {
+	a.grpcServer = server.SetupGRPCServer(a.cfg, a.urlRepo, a.auditManager, a.logger)
+
+	listener, err := net.Listen("tcp", a.cfg.GRPCServerAddress)
+	if err != nil {
+		return fmt.Errorf("failed to create gRPC listener: %w", err)
+	}
+	a.grpcListener = listener
+
+	return nil
+}
+
 // Run запускает приложение
 func (a *App) Run(ctx context.Context) error {
-	// Канал для передачи ошибок из горутины сервера
-	serverErr := make(chan error, 1)
+	// Канал для передачи ошибок из горутин серверов
+	serverErr := make(chan error, 2)
 
-	// WaitGroup для ожидания завершения горутины сервера
+	// WaitGroup для ожидания завершения горутин серверов
 	var wg sync.WaitGroup
 
-	// Запуск сервера в отдельной горутине
+	// Запуск HTTP сервера в отдельной горутине
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := a.runServer(); err != nil {
-			serverErr <- err
+		if err := a.runHTTPServer(); err != nil {
+			serverErr <- fmt.Errorf("HTTP server error: %w", err)
 		}
 	}()
 
-	// Ожидание сигнала для завершения или ошибки сервера
+	// Запуск gRPC сервера в отдельной горутине
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := a.runGRPCServer(); err != nil {
+			serverErr <- fmt.Errorf("gRPC server error: %w", err)
+		}
+	}()
+
+	// Ожидание сигнала для завершения или ошибки серверов
 	select {
 	case <-ctx.Done():
 		a.logger.Info("Received shutdown signal, starting graceful shutdown")
@@ -130,15 +160,15 @@ func (a *App) Run(ctx context.Context) error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Запрашиваем корректное завершение работы сервера
+	// Запрашиваем корректное завершение работы серверов
 	if err := a.shutdown(shutdownCtx); err != nil {
 		a.logger.Error("Server shutdown error", zap.Error(err))
 		return err
 	}
 
-	// Ждем завершения горутины сервера
+	// Ждем завершения горутин серверов
 	wg.Wait()
-	a.logger.Info("Server gracefully stopped")
+	a.logger.Info("Servers gracefully stopped")
 
 	// Закрываем ресурсы
 	if err := a.close(); err != nil {
@@ -150,8 +180,8 @@ func (a *App) Run(ctx context.Context) error {
 	return nil
 }
 
-// runServer запускает HTTP/HTTPS сервер
-func (a *App) runServer() error {
+// runHTTPServer запускает HTTP/HTTPS сервер
+func (a *App) runHTTPServer() error {
 	if a.cfg.EnableHTTPS {
 		a.logger.Info("Starting HTTPS server", zap.String("address", a.cfg.ServerAddress))
 		// Используем autocert для автоматического получения сертификатов Let's Encrypt
@@ -164,21 +194,40 @@ func (a *App) runServer() error {
 			return fmt.Errorf("HTTPS server failed to start: %w", err)
 		}
 	} else {
-		a.logger.Info("Starting server", zap.String("address", a.cfg.ServerAddress))
+		a.logger.Info("Starting HTTP server", zap.String("address", a.cfg.ServerAddress))
 		if err := a.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			return fmt.Errorf("server failed to start: %w", err)
+			return fmt.Errorf("HTTP server failed to start: %w", err)
 		}
 	}
 	return nil
 }
 
-// shutdown выполняет graceful shutdown сервера
+// runGRPCServer запускает gRPC сервер
+func (a *App) runGRPCServer() error {
+	a.logger.Info("Starting gRPC server", zap.String("address", a.cfg.GRPCServerAddress))
+	if err := a.grpcServer.Serve(a.grpcListener); err != nil {
+		return fmt.Errorf("gRPC server failed to start: %w", err)
+	}
+	return nil
+}
+
+// shutdown выполняет graceful shutdown серверов
 func (a *App) shutdown(ctx context.Context) error {
+	var errs []error
+
+	// Shutdown HTTP сервера
+	a.logger.Info("Shutting down HTTP server")
 	if err := a.httpServer.Shutdown(ctx); err != nil {
-		a.logger.Warn("Server forced to shutdown", zap.Error(err))
-		// Принудительное завершение через 5 секунд
-		<-time.After(5 * time.Second)
-		return fmt.Errorf("server forced to shutdown: %w", err)
+		a.logger.Warn("HTTP server forced to shutdown", zap.Error(err))
+		errs = append(errs, fmt.Errorf("HTTP server shutdown error: %w", err))
+	}
+
+	// Graceful stop gRPC сервера
+	a.logger.Info("Shutting down gRPC server")
+	a.grpcServer.GracefulStop()
+
+	if len(errs) > 0 {
+		return fmt.Errorf("errors during shutdown: %v", errs)
 	}
 	return nil
 }
