@@ -7,12 +7,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestTrustedSubnetMiddleware_EmptyTrustedSubnet(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	middleware := TrustedSubnetMiddleware("")
+	logger := zap.NewNop()
+	middleware := TrustedSubnetMiddleware("", logger)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -28,7 +30,8 @@ func TestTrustedSubnetMiddleware_EmptyTrustedSubnet(t *testing.T) {
 func TestTrustedSubnetMiddleware_MissingXRealIPHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	middleware := TrustedSubnetMiddleware("192.168.1.0/24")
+	logger := zap.NewNop()
+	middleware := TrustedSubnetMiddleware("192.168.1.0/24", logger)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -44,7 +47,8 @@ func TestTrustedSubnetMiddleware_MissingXRealIPHeader(t *testing.T) {
 func TestTrustedSubnetMiddleware_IPNotInTrustedSubnet(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	middleware := TrustedSubnetMiddleware("192.168.1.0/24")
+	logger := zap.NewNop()
+	middleware := TrustedSubnetMiddleware("192.168.1.0/24", logger)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -60,7 +64,8 @@ func TestTrustedSubnetMiddleware_IPNotInTrustedSubnet(t *testing.T) {
 func TestTrustedSubnetMiddleware_IPInTrustedSubnet(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	middleware := TrustedSubnetMiddleware("192.168.1.0/24")
+	logger := zap.NewNop()
+	middleware := TrustedSubnetMiddleware("192.168.1.0/24", logger)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -76,7 +81,8 @@ func TestTrustedSubnetMiddleware_IPInTrustedSubnet(t *testing.T) {
 func TestTrustedSubnetMiddleware_InvalidCIDR(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	middleware := TrustedSubnetMiddleware("invalid-cidr")
+	logger := zap.NewNop()
+	middleware := TrustedSubnetMiddleware("invalid-cidr", logger)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -92,7 +98,8 @@ func TestTrustedSubnetMiddleware_InvalidCIDR(t *testing.T) {
 func TestTrustedSubnetMiddleware_InvalidIP(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	middleware := TrustedSubnetMiddleware("192.168.1.0/24")
+	logger := zap.NewNop()
+	middleware := TrustedSubnetMiddleware("192.168.1.0/24", logger)
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -108,7 +115,8 @@ func TestTrustedSubnetMiddleware_InvalidIP(t *testing.T) {
 func TestTrustedSubnetMiddleware_IPAtSubnetBoundary(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	middleware := TrustedSubnetMiddleware("192.168.1.0/24")
+	logger := zap.NewNop()
+	middleware := TrustedSubnetMiddleware("192.168.1.0/24", logger)
 
 	testCases := []struct {
 		name     string
@@ -184,7 +192,8 @@ func TestTrustedSubnetMiddleware_DifferentCIDRFormats(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			middleware := TrustedSubnetMiddleware(tc.cidr)
+			logger := zap.NewNop()
+			middleware := TrustedSubnetMiddleware(tc.cidr, logger)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)

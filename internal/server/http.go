@@ -67,7 +67,7 @@ func SetupServer(cfg *config.Config, urlRepo domain.URLRepository, auditManager 
 		api.POST("/shorten/batch", urlHandler.CreateShortBatchURL)
 		api.GET("/user/urls", urlHandler.GetUserOriginalURLs)
 		api.DELETE("/user/urls", urlHandler.DeleteURLsByUserID)
-		api.GET("/internal/stats", middleware.TrustedSubnetMiddleware(cfg.TrustedSubnet), statsHandler.GetStats)
+		api.GET("/internal/stats", middleware.TrustedSubnetMiddleware(cfg.TrustedSubnet, log), statsHandler.GetStats)
 	}
 
 	return r
