@@ -45,11 +45,12 @@ func (r *DBURLRepository) Get(ctx context.Context, id string) (domainurl.URL, bo
 // GetAllByUserID возвращает все URL, принадлежащие указанному пользователю.
 //
 // Возвращает срез URL в порядке убывания времени создания.
+// Исключает удаленные URL (is_deleted = true).
 func (r *DBURLRepository) GetAllByUserID(ctx context.Context, userID *uuid.UUID) ([]domainurl.URL, error) {
 	query := `
 		SELECT short_url, original_url, user_id, is_deleted
 		FROM urls
-		WHERE user_id = $1
+		WHERE user_id = $1 AND is_deleted = false
 		ORDER BY created_at DESC
 	`
 	rows, err := r.db.QueryContext(ctx, query, userID)
